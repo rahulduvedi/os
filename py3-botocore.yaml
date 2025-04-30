@@ -1,6 +1,6 @@
 package:
   name: py3-botocore
-  version: "1.37.34"
+  version: "1.38.5"
   epoch: 0
   description: The low-level, core functionality of Boto3
   copyright:
@@ -29,7 +29,7 @@ pipeline:
   - uses: fetch
     with:
       uri: https://files.pythonhosted.org/packages/source/b/botocore/botocore-${{package.version}}.tar.gz
-      expected-sha256: 2909b6dbf9c90347c71a6fa0364acee522d6a7664f13d6f7996c9dd1b1f46fac
+      expected-sha256: 506e8274f7ddb84ca4ec85f7f9229de59fb43702e2e0b1400bea07f7f4a7ba82
 
 subpackages:
   - range: py-versions

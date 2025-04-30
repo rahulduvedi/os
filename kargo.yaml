@@ -1,6 +1,6 @@
 package:
   name: kargo
-  version: "1.4.1"
+  version: "1.4.3"
   epoch: 0
   description: Application lifecycle orchestration
   copyright:
@@ -24,12 +24,17 @@ pipeline:
     with:
       repository: https://github.com/akuity/kargo
       tag: v${{package.version}}
-      expected-commit: bb6a83e6f3089d2d7da7d7aab0f0283879b1f67c
+      expected-commit: c1ae02effba4a2ed844e17cf3377c230882669e7
 
   - runs: |
       cd ui
       pnpm install
       NODE_ENV='production' pnpm run build
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/net@v0.38.0
 
   - uses: go/build
     with:
