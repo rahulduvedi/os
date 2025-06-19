@@ -1,15 +1,17 @@
 package:
   name: kubo
   version: "0.35.0"
-  epoch: 3
+  epoch: 4
   description: An IPFS implementation in Go
   copyright:
     - license: MIT
   dependencies:
     runtime:
       - gosu
-      - "posix-libc-utils" # "getent" required
+      - posix-libc-utils # "getent" required
       - tini
+      - coreutils
+      - findutils
     provides:
       - ipfs=${{package.full-version}}
 
