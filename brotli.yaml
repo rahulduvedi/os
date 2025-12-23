@@ -1,27 +1,27 @@
 package:
   name: brotli
-  version: 1.1.0
-  epoch: 4
+  version: "1.2.0"
+  epoch: 1
   description: "a generic lossless compression algorithm"
   copyright:
     - license: MIT
+  dependencies:
+    runtime:
+      - libbrotlicommon1
+      - libbrotlidec1
+      - libbrotlienc1
 
 environment:
   contents:
     packages:
       - build-base
-      - busybox
-      - ca-certificates-bundle
-      - cmake
-      - libtool
-      - wolfi-base
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/google/brotli.git
       tag: v${{package.version}}
-      expected-commit: ed738e842d2fbdf2d6459e39267a633c4a9b2f5d
+      expected-commit: 028fb5a23661f123017c060daa546b55cf4bde29
 
   - uses: cmake/configure
 
@@ -32,7 +32,7 @@ pipeline:
   - uses: strip
 
 subpackages:
-  - name: "brotli-dev"
+  - name: ${{package.name}}-dev
     description: "headers for brotli"
     pipeline:
       - uses: split/dev
@@ -80,24 +80,23 @@ update:
     strip-prefix: v
 
 test:
-  environment:
-    contents:
-      packages:
-        - bash
-        - coreutils
-        - findutils
   pipeline:
-    - name: "Verify brotli version"
-      runs: |
-        brotli --version
+    - uses: test/tw/ldd-check
+    - uses: test/tw/help-check
+      with:
+        bins: brotli
+    - uses: test/tw/ver-check
+      with:
+        bins: brotli
     - name: "Basic compression test"
       runs: |
         echo "Hello, Brotli compression test" > original.txt
+        cp original.txt copy.txt
         brotli original.txt
         test -f original.txt.br
         rm original.txt  # Remove original before decompressing
         brotli --decompress original.txt.br
-        diff original.txt <(echo "Hello, Brotli compression test")
+        diff original.txt copy.txt
     - name: "Compression levels test"
       runs: |
         echo "Testing different compression levels" > level_test.txt
@@ -111,9 +110,10 @@ test:
         diff level_test.txt level11
     - name: "Stream compression test"
       runs: |
-        echo "Testing stream compression" | brotli > stream.br
+        echo "Testing stream compression" > stream
+        cat stream | brotli > stream.br
         brotli --decompress < stream.br > stream_decoded
-        diff stream_decoded <(echo "Testing stream compression")
+        diff stream stream_decoded
     - name: "Input validation test"
       runs: |
         # Should fail with non-existent input

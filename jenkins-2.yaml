@@ -1,6 +1,6 @@
 package:
   name: jenkins-2
-  version: "2.510"
+  version: "2.542"
   epoch: 0
   description: Open-source CI/CD application.
   copyright:
@@ -9,50 +9,36 @@ package:
     provides:
       - jenkins=${{package.full-version}}
     runtime:
-      # Jenkins requires both bash and busybox.
-      - bash
-      - busybox
-      - coreutils
-      - glibc-locale-en
       # The entrypoint script is pulled from a separate repo, which we'e packaged.
       - jenkins-entrypoint
-      - openjdk-17-default-jvm
-      - ttf-dejavu
-      - tzdata
+      - jenkins-utils
+      - openjdk-${{vars.java-version}}-default-jvm
+
+vars:
+  java-version: '17'
 
 environment:
   contents:
     packages:
-      - autoconf
-      - automake
-      - bash
-      - build-base
       - busybox
-      - ca-certificates-bundle
-      - coreutils
-      - git
-      - glibc-locale-en
+      - libstdc++
       - libxml2-utils
       - maven
-      - openjdk-17-default-jdk
-      - openssh-client
-      - patch
-      - tini
-      - ttf-dejavu
-      - tzdata
+      - openjdk-${{vars.java-version}}-default-jdk
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/jenkinsci/jenkins
       tag: jenkins-${{package.version}}
-      expected-commit: 9a7e7ed6baa94f8527371a87b165d129befd3711
-
-  - uses: patch
-    with:
-      patches: ignoreArchiveNotReadableTest.patch
+      expected-commit: bc673e4d81eb860c9ee57cf5ad605646c60f66cc
 
   - uses: maven/pombump
+
+  - uses: maven/pombump
+    with:
+      patch-file: pombump-deps-bom.yaml
+      pom: bom/pom.xml
 
   - runs: mvn spotless:apply
 
@@ -75,6 +61,13 @@ pipeline:
       git checkout "${remoting_version}"
       mvn -B -V -e --ntp -Dchangelist="${remoting_version}" -Pquick-build clean package
 
+      # The jenkins docker-agent shares similar tags to remoting
+      cd ..
+      git clone https://github.com/jenkinsci/docker-agent
+      cd docker-agent
+      agent_version=$(git tag -l "${remoting_version}*" | sort -rV | head -1)
+      git checkout "${agent_version}"
+
       cd ..
       # tests take ~1.5 hours to run and have passed 100% since the initial addition of Jenkins, let's skip them and save time + resources
       mvn install -DskipTests=true -Dyarn.lint.skip=true
@@ -83,6 +76,39 @@ pipeline:
       mv war/target/jenkins.war ${{targets.destdir}}/usr/share/java/jenkins/
 
 subpackages:
+  - name: "jenkins-utils"
+    description: "Metapackage for utilities used across Jenkins"
+    dependencies:
+      runtime:
+        - bash
+        - bash-binsh
+        - coreutils
+        - curl
+        - debianutils
+        - diffutils
+        - findutils
+        - git
+        - git-lfs
+        - glibc-locale-en
+        - gnutar
+        - grep
+        - gzip
+        - krb5-libs
+        - less
+        - patch
+        - perl
+        - procps
+        - openssh-client
+        - openssh-keygen
+        - ttf-dejavu
+        - sed
+        - shadow
+        - tzdata
+        - unzip
+    test:
+      pipeline:
+        - uses: test/metapackage
+
   # The Jenkins entrypoint script expects directories to exist, and the .war file
   # under a different location.
   - name: "jenkins-compat"
@@ -145,6 +171,38 @@ subpackages:
             stat /usr/share/jenkins/agent.jar
             stat /usr/share/jenkins/slave.jar
 
+  - name: jenkins-docker-agent
+    dependencies:
+      # These are core runtime dependencies required for common functionality
+      # in Jenkins builds / pipeline jobs.
+      runtime:
+        - git-daemon
+        - jenkins-utils
+        - openjdk-${{vars.java-version}}-default-jdk
+        - openssh-client
+        - openssl
+    pipeline:
+      - runs: |
+          mkdir -p "${{targets.contextdir}}"/usr/local/bin
+
+          # Install the jenkins-agent script
+          install -Dm755 docker-agent/jenkins-agent ${{targets.contextdir}}/usr/local/bin/jenkins-agent
+
+          # Create backward compatibility symlink for jenkins-slave
+          ln -sf /usr/local/bin/jenkins-agent ${{targets.contextdir}}/usr/local/bin/jenkins-slave
+
+          echo "Docker agent script installation completed successfully"
+    test:
+      pipeline:
+        - runs: |
+            if [ -x "/usr/local/bin/jenkins-agent" ]; then
+              echo "Jenkins agent script is executable."
+            else
+              echo "Jenkins agent script is not executable!" && exit 1
+            fi
+
+            readlink -f /usr/local/bin/jenkins-slave | grep /usr/local/bin/jenkins-agent
+
 update:
   enabled: true
   require-sequential: true
@@ -160,7 +218,6 @@ test:
     contents:
       packages:
         - jenkins-compat
-        - jenkins-entrypoint
   pipeline:
     - name: "start daemon on localhost"
       uses: test/daemon-check-output
@@ -176,3 +233,4 @@ test:
           echo "WAR file timestamp is zero"
           exit 1
         fi
+    - uses: test/no-docs

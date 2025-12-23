@@ -1,6 +1,6 @@
 package:
   name: py3-gcloud-aio-storage
-  version: "9.4.0"
+  version: "9.6.1"
   epoch: 0
   description: Python Client for Google Cloud Storage
   copyright:
@@ -30,7 +30,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 9ae4388d13642c3f2582a21ce27883f04332e983
+      expected-commit: ac7fa48a4c82017c7d04b5e62574335f212f85f6
       repository: https://github.com/talkiq/gcloud-aio
       tag: storage-${{package.version}}
 
@@ -73,6 +73,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

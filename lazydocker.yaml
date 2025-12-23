@@ -1,7 +1,7 @@
 package:
   name: lazydocker
-  version: 0.24.1
-  epoch: 3
+  version: "0.24.3"
+  epoch: 0 # CVE-2025-61725
   description: The lazier way to manage everything docker
   copyright:
     - license: MIT
@@ -11,7 +11,7 @@ pipeline:
     with:
       repository: https://github.com/jesseduffield/lazydocker
       tag: v${{package.version}}
-      expected-commit: be051153525b018a46f71a2b2ed42cde39a1110c
+      expected-commit: f4fc3669ca8eb67aa350a76503397192bf26f057
 
   - uses: go/build
     with:

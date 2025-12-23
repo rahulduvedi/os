@@ -1,6 +1,6 @@
 package:
   name: php-8.1-pdo_snowflake
-  version: "3.1.0"
+  version: "3.4.0"
   epoch: 0
   description: "Snowflake driver that uses the PHP Data Objects (PDO) extension"
   copyright:
@@ -43,7 +43,7 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/snowflakedb/pdo_snowflake
-      expected-commit: 53edf0f13fcd97d9bcc863328a02a665f311a861
+      expected-commit: 70ed51d9685aefdc6488312a4705841e43e71d73
       tag: v${{package.version}}
 
   - name: Run and build

@@ -1,7 +1,7 @@
 package:
   name: jitsucom-jitsu
-  version: "2.9.0"
-  epoch: 1
+  version: "2.11.0"
+  epoch: 11 # GHSA-mwv6-3258-q52c
   description: Jitsu is an open-source Segment alternative. Fully-scriptable data ingestion engine for modern data teams. Set-up a real-time data pipeline in minutes, not days
   copyright:
     - license: MIT
@@ -11,6 +11,7 @@ package:
     runtime:
       - bash
       - curl
+      - libvips
       - netcat-openbsd
       - nodejs-18
       - openssl
@@ -32,23 +33,52 @@ environment:
       - npm
       - openssl
       - pnpm
+      - posix-libc-utils
       - py3-setuptools
       - python3
 
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: f216c4e107bd778f28915c17ef51e3b8ce9b1cd6
+      expected-commit: 3fa74aae09c7d802c43cb0ac0db4f05397b458de
       repository: https://github.com/jitsucom/jitsu
       tag: jitsu2-v${{package.version}}
 
   - uses: patch
     with:
-      patches: GHSA-c76h-2ccp-4975.patch CVE-2025-27152.patch CVE-2025-27789.patch
+      patches: consolidated-cve-remedation.patch GHSA-33vc-wfww-vjfv.patch GHSA-5jpx-9hw9-2fx4.patch
+
+  - name: Bump dependencies to mitigate vulnerabilities
+    runs: |
+      jq '.dependencies."js-yaml" = "^4.1.1"' webapps/console/package.json > temp.json && mv temp.json webapps/console/package.json
+      # Remediate GHSA-w37m-7fhw-fmv9 and GHSA-mwv6-3258-q52c
+      jq '.dependencies."next" = "^15.5.8"' webapps/console/package.json > temp.json && mv temp.json webapps/console/package.json
+
+  - name: "delete leftover source files"
+    runs: |
+      # these files produce FTBFS and have been deleted upstream post-release
+      # see https://github.com/jitsucom/jitsu/commit/b485eb02a5cf2d63fe1144c9f00be4def99c28ea
+      rm -f webapps/console/pages/api/admin/migrate-mappings.ts
+      rm -f webapps/console/pages/api/admin/migrate.ts
 
   - runs: |
-      # CVE-2025-30218
-      (cd webapps/console && npm pkg set dependencies.next=^15.2.4)
+      # isolated-vm 6.x dropped support for NodeJS 18.x, which jitsucom-jitsu
+      # still requires
+      pnpm pkg set pnpm.overrides['isolated-vm']=^5.0.1
+      # Remediate GHSA-554w-wpv2-vw27, GHSA-5gfm-wpxj-wjgq, GHSA-65ch-62r8-g69g
+      pnpm pkg set pnpm.overrides['node-forge']=^1.3.2
+      (cd libs/core-functions && npm pkg set overrides['isolated-vm']=^5.0.1)
+      sed -i 's/\(isolated-vm.*\)6.0.0/\1^5.0.1/' services/profiles/dist_package.json
+      sed -i 's/\(isolated-vm.*\)6.0.0/\1^5.0.1/' services/rotor/dist_package.json
+
+      # CVE-2025-30218, CVE-2025-49005
+      (cd webapps/console && npm pkg set dependencies.next=^15.3.3)
+      # CVE-2025-65945 (GHSA-869p-cjfg-cm3x): Upgrade jsonwebtoken to fix jws vulnerability
+      # jsonwebtoken 9.0.2 uses jws 3.2.2 (vulnerable)
+      # jsonwebtoken 9.0.3 uses jws 4.0.1 (fixed)
+      (cd webapps/console && npm pkg set dependencies.jsonwebtoken=^9.0.3)
+      pnpm pkg set pnpm.overrides['jws']=^4.0.1
+
       pnpm install -r --unsafe-perm
       export NEXTJS_STANDALONE_BUILD=1
 
@@ -60,6 +90,9 @@ pipeline:
 
 subpackages:
   - name: ${{package.name}}-console
+    dependencies:
+      runtime:
+        - ${{package.name}}
     pipeline:
       - runs: |
           mkdir -p ${{targets.contextdir}}/app
@@ -83,12 +116,24 @@ subpackages:
           cp -r ./webapps/console/public/* ${{targets.contextdir}}/app/webapps/console/public
 
           # remove musl deps that end up polluting our SCA-generated dependencies with unresolveable deps.
-          rm -rf \
-              ${{targets.contextdir}}/app/node_modules/.pnpm/@img+sharp-libvips-linuxmusl-x64@1.0.4 \
-              ${{targets.contextdir}}/app/node_modules/.pnpm/@img+sharp-linuxmusl-x64@0.33.5
-    dependencies:
-      runtime:
-        - ${{package.name}}
+          find ${{targets.contextdir}}/app/node_modules -type d -name '*musl*' -exec rm -rf {} + 2>/dev/null || true
+
+          # Remove any musl-related .node files
+          find ${{targets.contextdir}} -type f -name '*.node' -exec sh -c 'ldd "$1" 2>&1 | grep -q musl && rm -f "$1"' _ {} \; 2>/dev/null || true
+          find ${{targets.contextdir}} -type f -name '*.node' -exec sh -c 'ldd "$1" 2>&1 | grep -q libvips-cpp && rm -f "$1"' _ {} \; 2>/dev/null || true
+
+          # Remove musl shared libraries
+          find ${{targets.contextdir}} -type f -name '*musl*.so*' -delete
+    test:
+      pipeline:
+        - name: Verify runtime dependencies exist
+          runs: |
+            bash --version
+            node --version
+        - name: Verify image entrypoint exists
+          runs: |
+            [ -f /app/docker-start-console.sh ] || exit 1
+            [ -x /app/docker-start-console.sh ] || exit 1
 
   - name: ${{package.name}}-rotor
     pipeline:
@@ -100,9 +145,25 @@ subpackages:
     dependencies:
       runtime:
         - ${{package.name}}
+    test:
+      environment:
+        contents:
+          packages:
+            - busybox
+            - nodejs-18
+      pipeline:
+        - name: Verify rotor service files
+          runs: |
+            # Check that rotor service files exist
+            [ -f /usr/local/bin/docker-entrypoint.sh ] || exit 1
+            [ -x /usr/local/bin/docker-entrypoint.sh ] || exit 1
 
 update:
   enabled: true
   github:
     identifier: jitsucom/jitsu
     strip-prefix: jitsu2-v
+
+test:
+  pipeline:
+    - uses: test/emptypackage

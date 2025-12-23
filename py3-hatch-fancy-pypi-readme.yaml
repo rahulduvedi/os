@@ -2,7 +2,7 @@
 package:
   name: py3-hatch-fancy-pypi-readme
   version: "25.1.0"
-  epoch: 0
+  epoch: 4
   description: Fancy PyPI READMEs with Hatch
   copyright:
     - license: MIT
@@ -65,11 +65,22 @@ subpackages:
           find ${{targets.destdir}} -name "*.pyc" -exec rm -rf '{}' +
       - uses: strip
     test:
+      environment:
+        contents:
+          packages:
+            - git
+            - py${{range.key}}-pytest
+            - py${{range.key}}-build
+            - py${{range.key}}-wheel
       pipeline:
         - uses: python/import
           with:
             python: python${{range.key}}
             import: ${{vars.module-name}}
+        - runs: |
+            git clone --branch ${{package.version}} https://github.com/hynek/hatch-fancy-pypi-readme.git py${{range.key}}-hatch-fancy-pypi-readme
+            cd py${{range.key}}-hatch-fancy-pypi-readme
+            python${{range.key}} -m pytest tests/
 
   - range: py-versions
     name: py${{range.key}}-${{vars.pypi-package}}-bin
@@ -84,6 +95,11 @@ subpackages:
       - runs: |
           mkdir -p ${{targets.contextdir}}/usr
           mv ${{targets.contextdir}}/../py${{range.key}}-${{vars.pypi-package}}/usr/bin ${{targets.contextdir}}/usr
+    test:
+      pipeline:
+        - uses: test/tw/virtualpackage
+          with:
+            virtual-pkg-name: py3-${{vars.pypi-package}}
 
   - name: py3-supported-${{vars.pypi-package}}
     description: meta package providing ${{vars.pypi-package}} for supported python versions.
@@ -93,6 +109,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   enabled: true
@@ -101,3 +120,7 @@ update:
   github:
     identifier: hynek/hatch-fancy-pypi-readme
     use-tag: true
+
+test:
+  pipeline:
+    - uses: test/tw/byproductpackage

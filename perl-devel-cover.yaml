@@ -1,7 +1,7 @@
 # Generated from https://git.alpinelinux.org/aports/plain/community/perl-devel-cover/APKBUILD
 package:
   name: perl-devel-cover
-  version: "1.48"
+  version: "1.51"
   epoch: 0
   description: Code coverage metrics for Perl
   copyright:
@@ -10,12 +10,12 @@ package:
     runtime:
       - perl
       - perl-html-parser
-      - perl-template-toolkit
-      - perl-tidy
-      - perl-pod-coverage
-      - perl-test-differences
-      - perl-parallel-iterator
       - perl-json-maybexs
+      - perl-parallel-iterator
+      - perl-pod-coverage
+      - perl-template-toolkit
+      - perl-test-differences
+      - perl-tidy
 
 environment:
   contents:
@@ -38,7 +38,7 @@ environment:
 pipeline:
   - uses: fetch
     with:
-      expected-sha256: 063b81a5095a6ac241485c44e059fb1ee5543929bc4da82ac0574981c973e18d
+      expected-sha256: bf1936977027bacd243d1713778507149a2da269e7e729cf708b1860dee8f58a
       uri: https://cpan.metacpan.org/authors/id/P/PJ/PJCJ/Devel-Cover-${{package.version}}.tar.gz
 
   - uses: perl/make

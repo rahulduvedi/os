@@ -1,6 +1,6 @@
 package:
   name: terraform-provider-aws
-  version: "5.97.0"
+  version: "6.27.0"
   epoch: 0
   description: Terraform AWS provider
   copyright:
@@ -15,14 +15,14 @@ package:
 environment:
   contents:
     packages:
-      - go<1.24 # TODO(jason): Fails with 'unknown godebug "tlskyber"'
+      - go
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/hashicorp/terraform-provider-aws
       tag: v${{package.version}}
-      expected-commit: 306993cbf9bb497c272f7890df621a53eb75e3c7
+      expected-commit: 6ddf44c974d5bdaf06cf7486d81cffc0cdbd70c1
 
   - runs: go mod tidy
 

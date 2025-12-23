@@ -1,10 +1,15 @@
 package:
   name: apache2
-  version: "2.4.63"
-  epoch: 42
+  version: "2.4.66"
+  epoch: 0
   description: "Apache HTTP Server"
   copyright:
     - license: Apache-2.0
+  checks:
+    disabled:
+      - setuidgid
+      # Disabled until merged-varrun is done.
+      - tempdir
   dependencies:
     runtime:
       - ${{package.name}}-config
@@ -40,7 +45,7 @@ var-transforms:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 937029778b7dcd25ae7877c90d64cdbdab834486
+      expected-commit: e4a77ef6051b3fe22eafacbcf54855b178a0bddd
       repository: https://github.com/apache/httpd
       tag: ${{package.version}}
 
@@ -149,6 +154,20 @@ subpackages:
       runtime:
         - merged-usrsbin
         - wolfi-baselayout
+    # test added by a robot (binary)
+    test:
+      pipeline:
+        - runs: |
+            stat /usr/bin/ab
+            stat /usr/bin/checkgid
+            stat /usr/bin/fcgistarter
+            stat /usr/bin/htcacheclean
+            stat /usr/bin/htdbm
+            stat /usr/bin/htdigest
+            stat /usr/bin/htpasswd
+            stat /usr/bin/httxt2dbm
+            stat /usr/bin/logresolve
+            stat /usr/bin/rotatelogs
 
   - name: ${{package.name}}-data
     description: "Apache HTTP Server (data files)"
@@ -293,7 +312,7 @@ subpackages:
 
             # Start httpd using the custom configuration
             echo "Starting httpd..."
-            httpd -DFOREGROUND &
+            httpd -DFOREGROUND > /dev/null 2>&1 &
             httpd_pid=$!
 
             # Give httpd some time to start
@@ -310,7 +329,7 @@ subpackages:
 
             # Test serving the page using curl
             echo "Testing the page with curl..."
-            curl -v http://localhost/test.html 2>&1 | tee /tmp/curl_output.log
+            curl -v http://localhost/test.html > /tmp/curl_output.log 2>&1
 
             if grep "200 OK" /tmp/curl_output.log > /dev/null; then
                 echo "PASS: Page served successfully."
@@ -318,10 +337,6 @@ subpackages:
                 echo "FAIL: Could not retrieve the page. Check curl output:"
                 cat /tmp/curl_output.log
             fi
-
-            # Stop httpd
-            echo "Stopping httpd..."
-            kill "$httpd_pid"
 
 test:
   environment:
@@ -338,7 +353,7 @@ test:
 
         # Start httpd using the custom configuration
         echo "Starting httpd..."
-        httpd -DFOREGROUND &
+        httpd -DFOREGROUND > /dev/null 2>&1 &
         httpd_pid=$!
 
         # Give httpd some time to start
@@ -355,7 +370,7 @@ test:
 
         # Test serving the page using curl
         echo "Testing the page with curl..."
-        curl -v http://localhost/test.html 2>&1 | tee /tmp/curl_output.log
+        curl -v http://localhost/test.html > /tmp/curl_output.log 2>&1
 
         if grep "200 OK" /tmp/curl_output.log > /dev/null; then
             echo "PASS: Page served successfully."
@@ -363,11 +378,8 @@ test:
             echo "FAIL: Could not retrieve the page. Check curl output:"
             cat /tmp/curl_output.log
         fi
-
-        # Stop httpd
-        echo "Stopping httpd..."
-        kill "$httpd_pid"
     - uses: test/tw/ldd-check
+    - uses: test/no-docs
 
 update:
   enabled: true

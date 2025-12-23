@@ -1,22 +1,22 @@
 # Generated from https://pypi.org/project/google-cloud-bigquery/
 package:
   name: py3-google-cloud-bigquery
-  version: "3.32.0"
+  version: "3.39.0"
   epoch: 0
   description: Google BigQuery API client library
   copyright:
     - license: Apache-2.0
   dependencies:
     runtime:
-      - py3-grpcio
       - py3-google-api-core
-      - py3-proto-plus
       - py3-google-cloud-core
       - py3-google-resumable-media
+      - py3-grpcio
       - py3-packaging
-      - py3-protobuf
+      - py3-proto-plus
       - py3-python-dateutil
       - py3-requests
+      - py3.13-protobuf=6.31.1-r4 # 6.32.0 seems to be broken on ARM, illegal instruction segfaults
       - python-3
 
 environment:
@@ -32,7 +32,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 185116ead5f68b959feb339566e964572fe12692
+      expected-commit: 8634630fca32ae38ce6b4ef27679bb7444be59c6
       repository: https://github.com/googleapis/python-bigquery
       tag: v${{package.version}}
 

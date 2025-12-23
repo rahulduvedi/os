@@ -1,10 +1,13 @@
 package:
   name: crossplane-provider-azure
-  version: "1.12.0"
-  epoch: 0
+  version: "2.3.0"
+  epoch: 0 # GHSA-j5w8-q4qc-rx2x
   description: Official Azure Provider for Crossplane by Upbound
   copyright:
     - license: Apache-2.0
+  resources:
+    cpu: 16
+    memory: 32Gi
   dependencies:
     runtime:
       - terraform-provider-azurerm
@@ -16,25 +19,19 @@ environment:
       - build-base
       - busybox
       - curl
-      - docker
       - go
       - gzip
-      - jq
-  environment:
-    CGO_ENABLED: 0
+
+vars:
+  marketplace.version: 1.13.1
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/crossplane-contrib/provider-upjet-azure
       tag: v${{package.version}}
-      expected-commit: 417ea233b8876aad6a797d89a3ae0414516be0ad
+      expected-commit: 1b42cec3b5004e9665bc0e8cde000713f7533883
       recurse-submodules: true
-
-  - uses: go/bump
-    with:
-      deps: |-
-        golang.org/x/oauth2@v0.27.0
 
   - runs: |
       # This downloads a tool called `up` which is no longer open source, but is required to build the provider.
@@ -64,7 +61,7 @@ subpackages:
     range: packages
     pipeline:
       - runs: |
-          up xpkg xp-extract xpkg.upbound.io/upbound/${{range.value}}:v${{package.version}}
+          up xpkg xp-extract xpkg.upbound.io/upbound/${{range.value}}:v${{vars.marketplace.version}}
           mkdir -p "${{targets.subpkgdir}}"
           gunzip out.gz -c > "${{targets.subpkgdir}}"/package.yaml
 

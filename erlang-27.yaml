@@ -1,7 +1,7 @@
 package:
   name: erlang-27
-  version: "27.3.4"
-  epoch: 0
+  version: "27.3.4.6"
+  epoch: 1
   description: General-purpose programming language and runtime environment
   copyright:
     - license: Apache-2.0
@@ -28,10 +28,11 @@ environment:
       - zlib-dev
 
 pipeline:
-  - uses: fetch
+  - uses: git-checkout
     with:
-      expected-sha256: c3a0a0b51df08f877eed88378f3d2da7026a75b8559803bd78071bb47cd4783b
-      uri: https://github.com/erlang/otp/releases/download/OTP-${{package.version}}/otp_src_${{package.version}}.tar.gz
+      repository: https://github.com/erlang/otp
+      tag: OTP-${{package.version}}
+      expected-commit: f1b17a1fb4d2bc74501608852547f8d9b504f7e3
 
   - runs: |
       export CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS"
@@ -62,9 +63,15 @@ subpackages:
       - uses: split/dev
     dependencies:
       runtime:
-        - erlang
+        - ${{package.name}}
       provides:
         - erlang-dev=${{package.full-version}}
+    test:
+      pipeline:
+        - uses: test/virtualpackage
+          with:
+            virtual-pkg-name: erlang-dev
+            real-pkg-name: ${{subpkg.name}}
 
   - name: ${{package.name}}-odbc
     description: "Erlang odbc library"
@@ -79,6 +86,12 @@ subpackages:
         - unixodbc
       provides:
         - erlang-odbc=${{package.full-version}}
+    test:
+      pipeline:
+        - uses: test/virtualpackage
+          with:
+            virtual-pkg-name: erlang-odbc
+            real-pkg-name: ${{subpkg.name}}
 
 update:
   enabled: true
@@ -91,16 +104,15 @@ update:
 test:
   pipeline:
     - runs: |
-        erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell
-        ct_run --version
-        ct_run --help
         dialyzer --version
         dialyzer --help
-        erl --version
-        erl --help
-        erlc -v
         typer --version
         typer --help
+        erlc -help 2>&1 | grep Usage:
+    - runs: |
+        erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell
+        ct_run -noshell
+        erl < /dev/null
     - runs: |
         cat <<EOF > "hello.erl"
         -module(hello).

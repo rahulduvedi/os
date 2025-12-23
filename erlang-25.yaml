@@ -2,7 +2,7 @@
 package:
   name: erlang-25
   version: "25.3.2.21"
-  epoch: 0
+  epoch: 5
   description: General-purpose programming language and runtime environment
   copyright:
     - license: Apache-2.0
@@ -21,16 +21,18 @@ environment:
       - build-base
       - busybox
       - ca-certificates-bundle
+      - gcc-14-default
       - ncurses-dev
       - openssl-dev
       - perl-dev
       - zlib-dev
 
 pipeline:
-  - uses: fetch
+  - uses: git-checkout
     with:
-      expected-sha256: 99296fcd97a2053c5fcde7dc0ded2ba261a3baf1491c745fca71bd9804d51443
-      uri: https://github.com/erlang/otp/releases/download/OTP-${{package.version}}/otp_src_${{package.version}}.tar.gz
+      repository: https://github.com/erlang/otp
+      tag: OTP-${{package.version}}
+      expected-commit: 52199ed7e79646b73bacc47c92967ce9970b2373
 
   - runs: |
       export CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS"
@@ -55,15 +57,21 @@ pipeline:
   - uses: strip
 
 subpackages:
-  - name: "erlang-25-dev"
+  - name: ${{package.name}}-dev
     description: "headers for erlang"
     pipeline:
       - uses: split/dev
     dependencies:
       runtime:
-        - erlang
+        - ${{package.name}}
       provides:
         - erlang-dev=${{package.full-version}}
+    test:
+      pipeline:
+        - uses: test/virtualpackage
+          with:
+            virtual-pkg-name: erlang-dev
+            real-pkg-name: ${{subpkg.name}}
 
 update:
   enabled: true
@@ -77,16 +85,15 @@ test:
   pipeline:
     # Check the version of the installed Erlang/OTP release
     - runs: |
-        erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell
-        ct_run --version
-        ct_run help
         dialyzer --version
         dialyzer --help
-        erl --version
-        erl --help
-        erlc -v
         typer --version
         typer --help
+        erlc -help 2>&1 | grep Usage:
+    - runs: |
+        erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell
+        ct_run -noshell
+        erl < /dev/null
     # Create a simple Erlang module, compile it, and run it to print "hello, wolfi"
     - runs: |
         cat <<EOF > "hello.erl"

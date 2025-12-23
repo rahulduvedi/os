@@ -1,7 +1,7 @@
 package:
   name: apko
-  version: "0.27.6"
-  epoch: 0
+  version: "0.30.34"
+  epoch: 0 # CVE-2025-47907
   description: Build OCI images using APK directly without Dockerfile
   copyright:
     - license: Apache-2.0
@@ -14,7 +14,7 @@ pipeline:
     with:
       repository: https://github.com/chainguard-dev/apko
       tag: v${{package.version}}
-      expected-commit: f19d835ff999789c485ca1ec018c624f96bc7487
+      expected-commit: 347c2ffac0648e5859d6965b8201c09c211ee7ae
 
   - uses: go/build
     with:

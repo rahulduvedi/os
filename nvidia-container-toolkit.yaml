@@ -1,7 +1,7 @@
 package:
   name: nvidia-container-toolkit
-  version: "1.17.6"
-  epoch: 0
+  version: "1.18.1"
+  epoch: 1 # CVE-2025-61729
   description: Build and run containers leveraging NVIDIA GPUs
   copyright:
     - license: Apache-2.0
@@ -17,12 +17,12 @@ environment:
       - ca-certificates-bundle
       - go
   environment:
-    GCC_SPEC_FILE: /dev/null
+    GCC_SPEC_FILE: no-hardening.spec
 
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: e627eb2e21e167988e04c0579a1c941c1e263ff6
+      expected-commit: efe99418ef87500dbe059cadc9ab418b2815b9d5
       repository: https://github.com/NVIDIA/nvidia-container-toolkit
       tag: v${{package.version}}
 
@@ -35,6 +35,7 @@ data:
       nvidia-container-runtime: nvidia-container-runtime
       nvidia-cdi-hook: nvidia-cdi-hook
       nvidia-ctk: nvidia-ctk
+      nvidia-ctk-installer: nvidia-ctk-installer
 
 subpackages:
   - range: commands
@@ -55,21 +56,19 @@ subpackages:
 
   - name: "${{package.name}}-nvidia-toolkit"
     pipeline:
-      - uses: go/build
-        with:
-          modroot: .
-          packages: ./tools/container/nvidia-toolkit
-          ldflags: -s -w -X main.Version=${{package.version}}
-          output: nvidia-toolkit
-          vendor: true
       - runs: |
           # Ref: https://github.com/NVIDIA/nvidia-container-toolkit/blob/v1.15.0/deployments/container/Dockerfile.ubi8#L74
           mkdir -p ${{targets.contextdir}}/work
-          ln -sf /usr/bin/nvidia-toolkit ${{targets.contextdir}}/work/nvidia-toolkit
+          ln -sf /usr/bin/nvidia-ctk-installer ${{targets.contextdir}}/work/nvidia-toolkit
+          ln -sf /usr/bin/nvidia-ctk-installer ${{targets.contextdir}}/work/nvidia-ctk-installer
+    dependencies:
+      runtime:
+        - ${{package.name}}-nvidia-ctk-installer
     test:
       pipeline:
         - runs: |
             /work/nvidia-toolkit --version
+            /work/nvidia-ctk-installer --version
 
 update:
   enabled: true
@@ -78,3 +77,8 @@ update:
   github:
     identifier: NVIDIA/nvidia-container-toolkit
     strip-prefix: v
+
+# Based on package contents inspection, it was found that this origin package is empty apart from its own SBOM and this test was added to confirm it is empty and will fail if the package is no longer empty (contains more than an SBOM)
+test:
+  pipeline:
+    - uses: test/emptypackage

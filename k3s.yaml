@@ -1,7 +1,7 @@
 package:
   name: k3s
-  version: "1.33.0.1"
-  epoch: 1
+  version: "1.34.3.1"
+  epoch: 0 # GHSA-cfpf-hrx2-8rv6
   description:
   copyright:
     - license: Apache-2.0
@@ -10,8 +10,8 @@ package:
       - busybox
       - conntrack-tools
       - containerd-shim-runc-v2
-      - ip6tables # this pulls in iptables as well
       - ipset # required for network policy controller
+      - iptables-wrappers
       - kmod
       - libseccomp
       - merged-bin
@@ -48,7 +48,7 @@ var-transforms:
   - from: ${{package.version}}
     match: \.(\d+)$
     replace: +k3s$1
-    to: full-package-version
+    to: mangled-package-version
 
 # Upstream uses `dapper` to initialize build environments, but since melange
 # already provides a consistent build environment, we adopt upstreams ./scripts
@@ -57,8 +57,19 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/k3s-io/k3s
-      tag: v${{vars.full-package-version}}
-      expected-commit: 63ab8e534cdfce2a60f4b016dfedb4f8d74ae8ec
+      tag: v${{vars.mangled-package-version}}
+      expected-commit: 48ffa7b6893f21b919b3029d54c9d9838ae426a1
+
+  - uses: go/bump
+    with:
+      deps: |-
+        github.com/quic-go/quic-go@v0.54.1
+        github.com/libp2p/go-libp2p@v0.44.0
+        github.com/opencontainers/selinux@v1.13.0
+        github.com/containerd/containerd/v2@v2.1.5
+        golang.org/x/crypto@v0.45.0
+        github.com/expr-lang/expr@v1.17.7
+
   # Build things (almost) identical to upstream, with the k3s components
   # embedded in the "outer" multicall binary.
   - runs: |
@@ -66,10 +77,7 @@ pipeline:
       sed -e '/curl --compressed/d' -i scripts/download
       mkdir -p build/static bin/aux etc
       ./scripts/download
-  - uses: go/bump
-    with:
-      deps: |-
-        github.com/go-jose/go-jose/v4@v4.0.5
+
   - runs: |
       # Override the go version check at runtime to always match the go version at build time
       # Ref: https://github.com/k3s-io/k3s/pull/9054
@@ -77,6 +85,7 @@ pipeline:
       sed -i "s/\${VERSION_GOLANG}/$GOVERSION/g" scripts/build
 
       ./scripts/build
+
   # k3s embedds a lot of useful components (containerd, kubectl, etc...) in a
   # very efficient manner that can't be replicated with external runtime
   # components. To ensure we have an optimally packaged k3s, we try to mimic
@@ -97,6 +106,7 @@ pipeline:
 
       mkdir -p "${{targets.destdir}}/usr/bin"
       cp -r bin/* "${{targets.destdir}}/usr/bin/"
+
   - uses: strip
 
 subpackages:
@@ -107,8 +117,8 @@ subpackages:
         - busybox
         - conntrack-tools
         - containerd-shim-runc-v2
-        - ip6tables
         - ipset
+        - iptables-wrappers
         - kmod
         - libseccomp
         - merged-bin
@@ -152,8 +162,8 @@ subpackages:
       runtime:
         - busybox
         - conntrack-tools
-        - ip6tables
         - ipset
+        - iptables-wrappers
         - kmod
         - merged-bin
         - mount
@@ -166,14 +176,16 @@ subpackages:
       no-provides: true
     pipeline:
       - runs: |
-          sed -i '/VERSION_RUNC=$(get-module-version github.com\/opencontainers\/runc)/a VERSION_RUNC="v1.1.14"' ./scripts/version.sh
-          # Clean up the build directory
-          rm -rf bin etc
+          sed -i '/VERSION_CONTAINERD=$(get-module-version github.com\/containerd\/containerd\/v2)/a VERSION_CONTAINERD="v2.1.5"' ./scripts/version.sh
 
           # Override the go version check at runtime to always match the go version at build time
           # Ref: https://github.com/k3s-io/k3s/pull/9054
           GOVERSION=$(go env GOVERSION)
           sed -i "s/\${VERSION_GOLANG}/$GOVERSION/g" scripts/build
+
+          # Clean up the build directory and download again with specified versions
+          rm -rf bin etc build/src
+          ./scripts/download
 
           STATIC_BUILD=true ./scripts/build
 

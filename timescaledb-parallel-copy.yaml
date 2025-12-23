@@ -1,0 +1,67 @@
+package:
+  name: timescaledb-parallel-copy
+  version: "0.12.0"
+  epoch: 0 # GHSA-j5w8-q4qc-rx2x
+  description: A binary for parallel copying of CSV data into a TimescaleDB hypertable
+  copyright:
+    - license: Apache-2.0
+
+pipeline:
+  - uses: git-checkout
+    with:
+      repository: https://github.com/timescale/timescaledb-parallel-copy
+      tag: v${{package.version}}
+      expected-commit: 8ab2c88db1043c65a62a43bc1e7dc2b43ea4595b
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+
+  - uses: go/build
+    with:
+      packages: ./cmd/timescaledb-parallel-copy
+      output: timescaledb-parallel-copy
+
+update:
+  enabled: true
+  github:
+    identifier: timescale/timescaledb-parallel-copy
+    use-tag: true
+    strip-prefix: v
+
+test:
+  environment:
+    contents:
+      packages:
+        - postgresql
+        - postgresql-client
+        - shadow
+        - sudo-rs
+    environment:
+      PGUSER: wolfi
+  pipeline:
+    - runs: |
+        timescaledb-parallel-copy -h
+        # Upstream hardcoded the version string, upstream forgot to update it to version, so we can just check for 'v' here.
+        # https://github.com/timescale/timescaledb-parallel-copy/blob/10893677b8628d58a5ce64c625fae45170d25188/cmd/timescaledb-parallel-copy/main.go#L23
+        timescaledb-parallel-copy -version 2>&1| grep 'v'
+    - name: Start PostgreSQL instance and create testdb
+      runs: |
+        useradd $PGUSER
+        sudo -u $PGUSER initdb -D /tmp/test_db
+        sudo -u $PGUSER pg_ctl -D /tmp/test_db -o "-c unix_socket_directories='/tmp'" -l /tmp/logfile start
+        createdb -h /tmp testdb
+        psql -h /tmp -d testdb -c "CREATE TABLE test_table (time TIMESTAMPTZ, value INT);"
+    - name: Run timescaledb-parallel-copy
+      runs: |
+        echo "time,value" > test.csv
+        echo "2023-01-01 00:00:00,42" >> test.csv
+
+        timescaledb-parallel-copy \
+          --file test.csv \
+          --table test_table \
+          --connection "host=/tmp dbname=testdb user=$PGUSER" \
+          --copy-options "CSV" --skip-header
+
+        psql -h /tmp -d testdb -c "SELECT * FROM test_table;" | grep "42"

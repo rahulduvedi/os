@@ -1,6 +1,6 @@
 package:
   name: py3-toolz
-  version: 1.0.0
+  version: "1.1.0"
   epoch: 0
   description: A set of utility functions for iterators, functions, and dictionaries.
   annotations:
@@ -30,7 +30,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 07f30a9c75e07a4b7095d0ec93ba4e963504f259
+      expected-commit: 568c2b8393973cd172a466546c9d95779c452438
       repository: https://github.com/pytoolz/toolz
       tag: ${{package.version}}
 
@@ -95,3 +95,8 @@ update:
   github:
     identifier: pytoolz/toolz
     use-tag: true
+
+# Based on package contents inspection, it was found that this origin package is empty apart from its own SBOM and this test was added to confirm it is empty and will fail if the package is no longer empty (contains more than an SBOM)
+test:
+  pipeline:
+    - uses: test/emptypackage

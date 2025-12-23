@@ -1,6 +1,6 @@
 package:
   name: py3-typing-inspection
-  version: 0.4.0
+  version: "0.4.2"
   epoch: 0
   description: Runtime typing introspection tools
   copyright:
@@ -31,7 +31,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 34ce565809b97af7782144b88092a197a05a274d
+      expected-commit: 8db011350942f33ac4b5d7db60d4d9ea83ab480f
       repository: https://github.com/pydantic/typing-inspection
       tag: v${{package.version}}
 
@@ -65,6 +65,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

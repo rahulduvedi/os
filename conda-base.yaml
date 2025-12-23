@@ -1,29 +1,32 @@
 package:
   name: conda-base
-  version: "25.3.1"
+  version: "25.11.1"
   epoch: 0
   description: "Base environment for conda."
   copyright:
     - license: BSD-3-Clause
   dependencies:
     runtime:
-      - conda
+      - conda~${{package.version}}
 
 environment:
   contents:
     packages:
       - bash
       - busybox
-      - conda
+      - conda~${{package.version}}
 
 pipeline:
   - runs: |
       conda init
-      source ~/.bashrc
-      conda config --set root_prefix /root/conda
-      conda create -n base
+      source ${HOME}/.bashrc
+
+      # initialize a base environment
+      conda config --set root_prefix ${HOME}/conda
+      conda create --yes --name init
+
       mkdir -p "${{targets.contextdir}}"/root/conda
-      cp -r /root/conda/* "${{targets.contextdir}}"/root/conda
+      cp -r ${HOME}/.conda/envs/init/* "${{targets.contextdir}}"/root/conda
       echo "root_prefix: /root/conda" > "${{targets.destdir}}"/root/.condarc
 
 update:
@@ -32,11 +35,17 @@ update:
     identifier: conda/conda
 
 test:
+  environment:
+    accounts:
+      run-as: 0
+    environment:
+      HOME: /root
   pipeline:
     - runs: |
         conda --version
         conda init
-        source /root/.bashrc
+        source ${HOME}/.bashrc
+        conda config --add channels conda-forge
         conda install numpy
         conda create -n foo
         conda install -n foo numpy

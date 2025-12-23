@@ -1,0 +1,101 @@
+package:
+  name: py3-safetensors
+  version: "0.7.0"
+  epoch: 0
+  description: Fast and Safe Tensor serialization
+  copyright:
+    - license: Apache-2.0
+  dependencies:
+    provider-priority: 0
+
+vars:
+  pypi-package: safetensors
+  module-name: safetensors
+
+data:
+  - name: py-versions
+    items:
+      3.10: '310'
+      3.11: '311'
+      3.12: '312'
+      3.13: '313'
+
+environment:
+  contents:
+    packages:
+      - build-base
+      - busybox
+      - ca-certificates-bundle
+      - maturin
+      - py3-supported-maturin
+      - py3-supported-pip
+      - py3-supported-setuptools-rust
+      - rust
+
+pipeline:
+  - uses: git-checkout
+    with:
+      repository: https://github.com/huggingface/safetensors
+      tag: v${{package.version}}
+      expected-commit: fa27fa835a466cb50d07696ec20b94f46aed0e31
+
+subpackages:
+  - range: py-versions
+    name: py${{range.key}}-${{vars.pypi-package}}
+    description: ${{vars.pypi-package}} installed for python${{range.key}}
+    dependencies:
+      provides:
+        - py3-${{vars.pypi-package}}
+      runtime:
+        - py${{range.key}}-packaging
+      provider-priority: ${{range.value}}
+    pipeline:
+      - working-directory: bindings/python
+        uses: py/pip-build-install
+        with:
+          python: python${{range.key}}
+    test:
+      environment:
+        contents:
+          packages:
+            - py${{range.key}}-numpy-2.2
+            - py${{range.key}}-pip
+            - py${{range.key}}-packaging
+      pipeline:
+        - uses: test/tw/virtualpackage
+          with:
+            virtual-pkg-name: py3-${{vars.pypi-package}}
+        - uses: python/import
+          with:
+            python: python${{range.key}}
+            import: ${{vars.module-name}}
+        - uses: test/tw/pip-check
+        - uses: test/tw/ldd-check
+        - name: verify installation
+          runs: |
+            pip${{range.key}} install torch
+            # From https://raw.githubusercontent.com/huggingface/safetensors/refs/heads/main/bindings/python/tests/test_simple.py
+            python${{range.key}} test_simple.py
+
+  - name: py3-supported-${{vars.pypi-package}}
+    description: meta package providing ${{vars.pypi-package}} for supported python versions.
+    dependencies:
+      runtime:
+        - py3.10-${{vars.pypi-package}}
+        - py3.11-${{vars.pypi-package}}
+        - py3.12-${{vars.pypi-package}}
+        - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/tw/metapackage
+
+update:
+  enabled: true
+  git:
+    strip-prefix: v
+  ignore-regex-patterns:
+    - ^python-v.*
+
+test:
+  pipeline:
+    - uses: test/tw/byproductpackage

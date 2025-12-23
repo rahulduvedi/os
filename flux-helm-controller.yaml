@@ -1,27 +1,28 @@
 package:
   name: flux-helm-controller
-  version: "1.2.0"
-  epoch: 8
+  version: "1.4.5"
+  epoch: 1 # GHSA-j5w8-q4qc-rx2x
   description: The GitOps Toolkit Helm reconciler, for declarative Helming
   copyright:
     - license: Apache-2.0
 
+var-transforms:
+  - from: ${{package.version}}
+    match: ^(\d+).*
+    replace: $1
+    to: major-version
+
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 8e4de326fa2cfa84654c45cf7023875a2b932153
+      expected-commit: 3ebc2f57b7323371bf0d067bfb4e411592124bdf
       repository: https://github.com/fluxcd/helm-controller
       tag: v${{package.version}}
 
   - uses: go/bump
     with:
       deps: |-
-        oras.land/oras-go@v1.2.6
-        golang.org/x/oauth2@v0.27.0
-        golang.org/x/crypto@v0.35.0
-        github.com/containerd/containerd@v1.7.27
-        helm.sh/helm/v3@v3.17.3
-        golang.org/x/net@v0.38.0
+        golang.org/x/crypto@v0.45.0
 
   - uses: go/build
     with:
@@ -30,21 +31,28 @@ pipeline:
       packages: .
 
 subpackages:
-  - name: ${{package.name}}-bitnami-compat
-    description: "compat package for bitnami fluxcd-helm-controller image"
+  - name: ${{package.name}}-iamguarded-compat
+    description: "compat package for iamguarded"
     pipeline:
       - runs: |
-          mkdir -p ${{targets.contextdir}}/opt/bitnami/fluxcd-helm-controller/bin/
-          ln -sf /usr/bin/helm-controller ${{targets.contextdir}}/opt/bitnami/fluxcd-helm-controller/bin/helm-controller
+          mkdir -p /opt/iamguarded/fluxcd-helm-controller/bin/
+          ln -sf /usr/bin/helm-controller /opt/iamguarded/fluxcd-helm-controller/bin/helm-controller
+      - uses: iamguarded/build-compat
+        with:
+          package: flux-helm-controller
+          version: ${{vars.major-version}}
+      - uses: iamguarded/finalize-compat
+        with:
+          package: flux-helm-controller
+          version: ${{vars.major-version}}
     test:
-      environment:
-        contents:
-          packages:
-            - ${{package.name}}
       pipeline:
-        # the test is extensive in the main package and this is the same binary invoked via a symlink.
         - runs: |
-            /opt/bitnami/fluxcd-helm-controller/bin/helm-controller --help 2>&1 | grep -i "Usage of /opt/bitnami/fluxcd-helm-controller/bin/helm-controller"
+            stat /opt/iamguarded/fluxcd-helm-controller/bin/helm-controller
+        - uses: iamguarded/test-compat
+          with:
+            package: flux-helm-controller
+            version: ${{vars.major-version}}
 
 update:
   enabled: true
@@ -63,22 +71,19 @@ test:
         - curl
   pipeline:
     - uses: test/kwok/cluster
-    - name: "start ${{package.name}} and test"
+    - name: Launch controller with kwok cluster
       uses: test/daemon-check-output
       with:
         setup: |
           kubectl apply -f https://github.com/fluxcd/flux2/releases/latest/download/install.yaml
           kubectl wait --for=condition=Ready nodes --all
-        start: helm-controller --health-addr :9441 --metrics-addr :8081 > /dev/null 2>&1
+        start: helm-controller --health-addr :8080 --metrics-addr :8081
         timeout: 30
         expected_output: |
-          starting manager
-          Serving metrics server
-          helm.toolkit.fluxcd.io
           Starting Controller
           Starting workers
         post: |
           #!/bin/sh -e
           set -o pipefail
           curl -s localhost:8081/metrics  | grep rest_client_requests_total
-          curl -v localhost:9441/healthz 2>&1 | grep -i "200 OK"
+          curl -v localhost:8080/healthz 2>&1 | grep -i "200 OK"

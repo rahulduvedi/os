@@ -1,26 +1,22 @@
 package:
   name: velero-plugin-for-microsoft-azure
-  version: "1.12.0"
-  epoch: 1
+  version: "1.13.1"
+  epoch: 2 # GHSA-j5w8-q4qc-rx2x
   description: Plugins to support Velero on microsoft-azure
   copyright:
     - license: Apache-2.0
-  dependencies:
-    runtime:
-      - merged-bin
-      - wolfi-baselayout
 
 pipeline:
   - uses: git-checkout
     with:
       tag: v${{package.version}}
-      expected-commit: 5764f5907d9d8593bc6555af4d2a4ee5904aaeab
+      expected-commit: a672bd465813df887479a9a1845876f9149e95b9
       repository: https://github.com/vmware-tanzu/velero-plugin-for-microsoft-azure
 
   - uses: go/bump
     with:
       deps: |-
-        golang.org/x/net@v0.38.0
+        golang.org/x/crypto@v0.45.0
 
   - uses: go/build
     with:
@@ -43,11 +39,7 @@ subpackages:
           mkdir -p "${{targets.subpkgdir}}"/plugins
           # /target directory is created to match the Dockerfile
           mkdir -p "${{targets.subpkgdir}}"/target
-          cp "${{targets.destdir}}"/usr/bin/velero-plugin-for-microsoft-azure "${{targets.subpkgdir}}"/plugins/velero-plugin-for-microsoft-azure
-    dependencies:
-      runtime:
-        - merged-bin
-        - wolfi-baselayout
+          ln -sf /usr/bin/velero-plugin-for-microsoft-azure "${{targets.subpkgdir}}"/plugins/velero-plugin-for-microsoft-azure
 
 update:
   enabled: true

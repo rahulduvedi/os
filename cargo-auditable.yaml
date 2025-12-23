@@ -1,6 +1,6 @@
 package:
   name: cargo-auditable
-  version: "0.6.7"
+  version: "0.7.2"
   epoch: 0
   description: Cargo wrapper for embedding auditing data
   copyright:
@@ -18,7 +18,7 @@ pipeline:
     with:
       repository: https://github.com/rust-secure-code/cargo-auditable
       tag: v${{package.version}}
-      expected-commit: c65785507fa785f21a4971c2914ba3dd30575992
+      expected-commit: 0c4c6591a355c0fec883f70a4e9280974f15e02c
 
   - name: cargo deps bump
     runs: |
@@ -59,3 +59,7 @@ update:
     identifier: rust-secure-code/cargo-auditable
     use-tag: true
     strip-prefix: v
+
+test:
+  pipeline:
+    - uses: test/no-docs

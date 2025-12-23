@@ -1,7 +1,7 @@
 package:
   name: sbomqs
-  version: "1.0.5"
-  epoch: 0
+  version: "2.0.2"
+  epoch: 0 # CVE-2025-47907
   description: SBOM quality score - Quality metrics for your sboms
   copyright:
     - license: Apache-2.0
@@ -11,7 +11,7 @@ pipeline:
     with:
       repository: https://github.com/interlynk-io/sbomqs
       tag: v${{package.version}}
-      expected-commit: d2823c60dd7287c52d3d8e652a40c33c7f255407
+      expected-commit: a33b12b4fb3e2063af97b6a9394de257efdbfefc
 
   - uses: go/build
     with:

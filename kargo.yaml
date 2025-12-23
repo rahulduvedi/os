@@ -1,7 +1,7 @@
 package:
   name: kargo
-  version: "1.4.4"
-  epoch: 0
+  version: "1.8.4"
+  epoch: 2 # GHSA-cfpf-hrx2-8rv6
   description: Application lifecycle orchestration
   copyright:
     - license: Apache-2.0
@@ -24,17 +24,25 @@ pipeline:
     with:
       repository: https://github.com/akuity/kargo
       tag: v${{package.version}}
-      expected-commit: 4d5d4d4935e80e256dd2d9af8af84850603e3d21
+      expected-commit: dc38d05ff871ace7ae40fc23ef333ca717c96909
+
+  - uses: go/bump
+    with:
+      deps: |-
+        github.com/containerd/containerd@v1.7.29
+        golang.org/x/crypto@v0.45.0
+      modroot: hack/tools
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+        github.com/expr-lang/expr@v1.17.7
 
   - runs: |
       cd ui
       pnpm install
       NODE_ENV='production' pnpm run build
-
-  - uses: go/bump
-    with:
-      deps: |-
-        golang.org/x/net@v0.38.0
 
   - uses: go/build
     with:

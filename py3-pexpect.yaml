@@ -2,7 +2,7 @@
 package:
   name: py3-pexpect
   version: 4.8.0
-  epoch: 7
+  epoch: 9
   description: Pexpect allows easy control of interactive console applications.
   copyright:
     - license: ISC
@@ -69,8 +69,15 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   github:
     identifier: pexpect/pexpect
     use-tag: true
+
+test:
+  pipeline:
+    - uses: test/tw/byproductpackage

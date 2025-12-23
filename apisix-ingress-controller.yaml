@@ -1,0 +1,150 @@
+package:
+  name: apisix-ingress-controller
+  version: "1.8.4"
+  epoch: 7
+  description: APISIX Ingress Controller for Kubernetes.
+  copyright:
+    - license: Apache-2.0
+
+var-transforms:
+  - from: ${{package.version}}
+    match: ^(\d+).*
+    replace: $1
+    to: major-version
+
+pipeline:
+  - uses: git-checkout
+    with:
+      expected-commit: 019d719ef421e97ab47e68c0f34724010b05f1e0
+      repository: https://github.com/apache/apisix-ingress-controller
+      tag: v${{package.version}}
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+      modroot: test/e2e
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/net@v0.38.0
+        golang.org/x/oauth2@v0.27.0
+        google.golang.org/grpc@v1.57.1
+        golang.org/x/crypto@v0.45.0
+
+  - uses: go/build
+    with:
+      packages: .
+      ldflags: |
+        -X=github.com/apache/apisix-ingress-controller/pkg/version._buildVersion=${{package.version}}
+        -X=github.com/apache/apisix-ingress-controller/pkg/version._buildGitRevision=$(git rev-parse --short HEAD)
+        -X=github.com/apache/apisix-ingress-controller/pkg/version._buildOS=$(uname -s)/$(uname -m)
+      output: apisix-ingress-controller
+
+subpackages:
+  # NOTE: Upstream v1.8.x uses the "/ingress-apisix" layout with a custom entrypoint.
+  # This package mirrors that structure for compatibility. When bumping to v2.x (currently in RC stage it use "/app/..." layout) and need to update entrypoint and file paths accordingly
+  - name: ${{package.name}}-compat
+    description: Compatibility package for apisix-ingress-controller to match upstream paths
+    pipeline:
+      - runs: |
+          mkdir -p ${{targets.subpkgdir}}/ingress-apisix/conf
+          ln -sf /usr/bin/apisix-ingress-controller ${{targets.subpkgdir}}/ingress-apisix/apisix-ingress-controller
+          cp ./conf/apisix-schema.json ${{targets.subpkgdir}}/ingress-apisix/conf/apisix-schema.json
+    test:
+      pipeline:
+        - runs: |
+            stat /ingress-apisix/apisix-ingress-controller
+
+  - name: ${{package.name}}-iamguarded-compat
+    description: Compat package for iamguarded apisix-ingress-controller image
+    pipeline:
+      - uses: iamguarded/build-compat
+        with:
+          package: apisix-ingress-controller
+          version: ${{vars.major-version}}
+      - runs: |
+          mkdir -p ${{targets.contextdir}}/opt/iamguarded/apisix-ingress-controller/bin
+          ln -sf ../../../../usr/bin/apisix-ingress-controller ${{targets.contextdir}}/opt/iamguarded/apisix-ingress-controller/bin/apisix-ingress-controller
+          install -Dpm0644 -t "${{targets.contextdir}}/opt/iamguarded/apisix-ingress-controller/conf/" ./conf/apisix-schema.json
+      - uses: iamguarded/finalize-compat
+        with:
+          package: apisix-ingress-controller
+          version: ${{vars.major-version}}
+    test:
+      environment:
+        contents:
+          packages:
+            - ${{package.name}}
+            - curl
+            - wait-for-it
+        environment:
+          PATH: "/opt/iamguarded/apisix-ingress-controller/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          IAMGUARDED_APP_NAME: "apisix-ingress-controller"
+      pipeline:
+        - pipeline:
+            - uses: test/tw/symlink-check
+            - uses: test/tw/ver-check
+              with:
+                bins: apisix-ingress-controller
+            - uses: test/kwok/cluster
+            - uses: test/daemon-check-output
+              with:
+                setup: |
+                  kubectl config view --minify --raw > /tmp/kubeconfig.yaml
+                start: |
+                  /opt/iamguarded/apisix-ingress-controller/bin/apisix-ingress-controller ingress \
+                    --default-apisix-cluster-base-url http://apisix-service:9180/apisix/admin \
+                    --kubeconfig /tmp/kubeconfig.yaml
+                timeout: 30
+                expected_output: |
+                  start leader election
+                  start api server
+                post: |
+                  wait-for-it localhost:8080
+                  DURATION_ONE="$(curl -fsSL http://127.0.0.1:8080/metrics | grep -F -e go_gc_duration_seconds)"
+                  sleep 2
+                  DURATION_TWO="$(curl -fsSL http://127.0.0.1:8080/metrics | grep -q go_gc_duration_seconds)"
+                  if [ "${DURATION_ONE}" == "${DURATION_TWO}" ] ; then
+                      echo "Expected durations to be different, output may be garbled"
+                      exit 1
+                  fi
+
+update:
+  enabled: true
+  github:
+    identifier: apache/apisix-ingress-controller
+    strip-prefix: v
+
+test:
+  environment:
+    contents:
+      packages:
+        - curl
+        - wait-for-it
+  pipeline:
+    - runs: |
+        set -o pipefail
+        apisix-ingress-controller version | grep "${{ package.version }}"
+        apisix-ingress-controller --help 2>&1 | grep -F -e "Yet another Ingress controller"
+    - uses: test/kwok/cluster
+    - uses: test/daemon-check-output
+      with:
+        setup: |
+          kubectl config view --minify --raw > /tmp/kubeconfig.yaml
+        start: |
+          apisix-ingress-controller ingress --default-apisix-cluster-base-url http://apisix-service:9180/apisix/admin --kubeconfig /tmp/kubeconfig.yaml
+        timeout: 30
+        expected_output: |
+          start leader election
+          start api server
+        post: |
+          wait-for-it localhost:8080
+          DURATION_ONE="$(curl -fsSL http://127.0.0.1:8080/metrics | grep -F -e go_gc_duration_seconds)"
+          sleep 2
+          DURATION_TWO="$(curl -fsSL http://127.0.0.1:8080/metrics | grep -q go_gc_duration_seconds)"
+          if [ "${DURATION_ONE}" == "${DURATION_TWO}" ] ; then
+              echo "Expected durations to be different, output may be garbled"
+              exit 1
+          fi

@@ -1,6 +1,6 @@
 package:
   name: libpng
-  version: "1.6.48"
+  version: "1.6.53"
   epoch: 0
   description: Portable Network Graphics library
   copyright:
@@ -23,13 +23,16 @@ pipeline:
     with:
       repository: https://github.com/pnggroup/libpng
       tag: v${{package.version}}
-      expected-commit: ea127968204cc5d10f3fc9250c306b9e8cbd9b80
+      expected-commit: 4e3f57d50f552841550a36eabbb3fbcecacb7750
 
   - runs: autoreconf -vif
 
   - uses: autoconf/configure
 
   - uses: autoconf/make
+
+  - runs: |
+      make check
 
   - uses: autoconf/make-install
 
@@ -64,13 +67,14 @@ subpackages:
     description: libpng dev
     test:
       pipeline:
-        - runs: |
-            libpng-config --version
-            libpng-config --help
-            libpng16-config --version
-            libpng16-config --help
         - uses: test/pkgconf
         - uses: test/tw/ldd-check
+        - uses: test/tw/ver-check
+          with:
+            bins: libpng-config libpng16-config
+        - uses: test/tw/help-check
+          with:
+            bins: libpng-config libpng16-config
 
   - name: libpng-utils
     pipeline:
@@ -80,9 +84,10 @@ subpackages:
     description: libpng utils
     test:
       pipeline:
+        - uses: test/tw/ldd-check
         - runs: |
-            png-fix-itxt --version
-            png-fix-itxt --help
+            # With no arguments, shows usage as error. It doesn't accept --version or --help or similar
+            pngfix 2>&1 | grep -q "Usage: pngfix"
 
 update:
   enabled: true

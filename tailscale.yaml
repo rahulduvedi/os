@@ -1,7 +1,7 @@
 package:
   name: tailscale
-  version: "1.82.5"
-  epoch: 1
+  version: "1.92.3"
+  epoch: 0
   description: The easiest, most secure way to use WireGuard and 2FA.
   copyright:
     - license: BSD-3-Clause
@@ -22,18 +22,12 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: e4d64c6faf827a308ec20b39651225178e6743c0
+      expected-commit: 9a08e8f1c2021d5c85895e660cf01d8bb1bc9df0
       repository: https://github.com/tailscale/tailscale
       tag: v${{package.version}}
 
-  - uses: go/bump
-    with:
-      deps: |-
-        golang.org/x/oauth2@v0.27.0
-        github.com/gorilla/csrf@v1.7.3
-        golang.org/x/net@v0.38.0
-
   - runs: |
+      go mod tidy
       ./build_dist.sh tailscale.com/cmd/containerboot
       ./build_dist.sh tailscale.com/cmd/${{package.name}}
       ./build_dist.sh tailscale.com/cmd/${{package.name}}d
@@ -47,7 +41,7 @@ pipeline:
 
 subpackages:
   - name: ${{package.name}}-compat
-    description: "Compatability package to provide parity with upstream Tailscale binary locations"
+    description: "Compatibility package to provide parity with upstream Tailscale binary locations"
     pipeline:
       - runs: |
           mkdir -p "${{targets.subpkgdir}}"/usr/local/bin
@@ -89,10 +83,10 @@ test:
         /usr/local/sbin/tailscaled --version
     - name: Containerboot Test
       runs: |
-        containerboot &
+        nohup containerboot > /dev/null 2>&1 &
         sleep 2
     - name: Tailscale Daemon Test
       runs: |
-        tailscaled -tun=userspace-networking -socket=tailscaled.socket &
+        tailscaled -tun=userspace-networking -socket=tailscaled.socket > /dev/null 2>&1 &
         sleep 2
         tailscale --socket=tailscaled.socket status | grep -q 'Logged out.'

@@ -1,10 +1,13 @@
 package:
   name: xorg-server
-  version: "21.1.16"
-  epoch: 2
+  version: "21.1.21"
+  epoch: 0
   description: "X Server"
   copyright:
     - license: SGI-B-2.0
+  checks:
+    disabled:
+      - setuidgid
   dependencies:
     runtime:
       - dbus
@@ -47,18 +50,11 @@ environment:
       - systemd-dev
       - zlib-dev
 
-data:
-  - name: bins
-    items:
-      Xvfb: Virtual Framebuffer 'fake' X server
-      Xnest: A nested Xorg server
-      gtf: Generate mode timings using the GTF Timing Standard
-
 pipeline:
   - uses: fetch
     with:
       uri: https://www.x.org/releases/individual/xserver/xorg-server-${{package.version}}.tar.xz
-      expected-sha256: b14a116d2d805debc5b5b2aac505a279e69b217dae2fae2dfcb62400471a9970
+      expected-sha256: c0cbe5545b3f645bae6024b830d1d1154a956350683a4e52b2fff5b0fa1ab519
 
   - uses: autoconf/configure
     with:
@@ -85,6 +81,13 @@ pipeline:
 
   - uses: autoconf/make-install
 
+  - name: Remove xkb dir to avoid conflicts w/ xkeyboard-config symlink
+    runs: |
+      # Do it pedantically so we fail if upstream has changed something
+      rm ${{targets.destdir}}/usr/share/X11/xkb/compiled/README.compiled
+      rmdir ${{targets.destdir}}/usr/share/X11/xkb/compiled
+      rmdir ${{targets.destdir}}/usr/share/X11/xkb
+
   - uses: strip
 
 subpackages:
@@ -99,15 +102,48 @@ subpackages:
       pipeline:
         - uses: test/pkgconf
 
-  - range: bins
-    name: ${{range.key}}
-    description: ${{range.value}}
-    pipeline:
-      - runs: |
-          install -Dm755 "${{targets.destdir}}"/usr/bin/${{range.key}} "${{targets.subpkgdir}}"/usr/bin/${{range.key}}
+  - name: Xvfb
+    description: Virtual Framebuffer 'fake' X server
     dependencies:
       runtime:
         - mesa-libgallium
+      provides:
+        - xvfb=${{package.full-version}}
+    pipeline:
+      - runs: |
+          install -Dm755 "${{targets.destdir}}"/usr/bin/Xvfb "${{targets.subpkgdir}}"/usr/bin/Xvfb
+    test:
+      pipeline:
+        - uses: test/virtualpackage
+          with:
+            virtual-pkg-name: xvfb
+            real-pkg-name: ${{subpkg.name}}
+
+  - name: Xnest
+    description: A nested Xorg server
+    dependencies:
+      runtime:
+        - mesa-libgallium
+      provides:
+        - xnest=${{package.full-version}}
+    pipeline:
+      - runs: |
+          install -Dm755 "${{targets.destdir}}"/usr/bin/Xnest "${{targets.subpkgdir}}"/usr/bin/Xnest
+    test:
+      pipeline:
+        - uses: test/virtualpackage
+          with:
+            virtual-pkg-name: xnest
+            real-pkg-name: ${{subpkg.name}}
+
+  - name: gtf
+    description: Generate mode timings using the GTF Timing Standard
+    dependencies:
+      runtime:
+        - mesa-libgallium
+    pipeline:
+      - runs: |
+          install -Dm755 "${{targets.destdir}}"/usr/bin/gtf "${{targets.subpkgdir}}"/usr/bin/gtf
 
   - name: xvfb-run
     description: imlib2 dev
@@ -116,6 +152,7 @@ subpackages:
         - coreutils
         - xauth
         - mcookie
+        - Xvfb
     pipeline:
       - uses: git-checkout
         with:

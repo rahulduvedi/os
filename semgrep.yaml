@@ -1,6 +1,6 @@
 package:
   name: semgrep
-  version: "1.122.0"
+  version: "1.146.0"
   epoch: 0
   description: "Lightweight static analysis for many languages. Find bug variants with patterns that look like source code."
   copyright:
@@ -20,14 +20,17 @@ environment:
       - bubblewrap # build errors without it but bubblewrap throws a warning that it's not working anyway
       - build-base
       - busybox
+      - bzip2-dev
       - ca-certificates-bundle
       - curl # needed for opam, it tries to use wget with missing flags instead.
       - curl-dev
+      - elfutils-dev
       - git
       - gmp-dev # linked against
       - libcurl-openssl4
       - libev-dev
       - libffi-dev
+      - libunwind-dev
       - ocaml=${{vars.ocaml_version}}
       - opam
       - openssl-dev
@@ -45,13 +48,14 @@ environment:
       - rsync
       - wolfi-base
       - zlib-dev
+      - zstd-dev
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/returntocorp/semgrep
       tag: v${{package.version}}
-      expected-commit: 382a8a93afbb16bdf76e88cba0aef42b7e0f9b09
+      expected-commit: 079e05d08b86ec1b07509d2e755c631156d3705b
       recurse-submodules: true
 
   - name: Change tree sitter version to 0.25
@@ -59,7 +63,7 @@ pipeline:
       # The tree-sitter version in the repo is 0.20.6, but we need to use 0.25.3
       sed -i 's/0\.22\.6/0.25.3/g' libs/ocaml-tree-sitter-core/tree-sitter-version.default
 
-  - name: Setup and build
+  - name: "initialize the environment"
     runs: |
       # Setup OCaml and opam.
       rm -rf ~/.opam || true
@@ -70,6 +74,9 @@ pipeline:
         echo "Failed to create OCaml switch, retrying with debug info..."
         OPAMVERBOSE=1 OPAMJOBS=1 opam switch create ${{vars.ocaml_version}} ocaml-base-compiler.${{vars.ocaml_version}}
       }
+
+  - name: "setup and build"
+    runs: |
       eval $(opam env --switch=${{vars.ocaml_version}})
 
       # Setup the opam environment. Install the dependencies etc.
@@ -77,6 +84,7 @@ pipeline:
 
       # Build the core library.
       make core
+
       # Make binaries available to pysemgrep
       make copy-core-for-cli
 
@@ -109,7 +117,12 @@ subpackages:
           python3=$(readlink -f `which python3`)
           $python3 -m pip install --verbose \
             --ignore-installed \
-            --prefix=/usr "--root=${{targets.contextdir}}" setuptools
+            --prefix=/usr "--root=${{targets.contextdir}}" setuptools packaging
+
+          # Upgrade requests to fix GHSA-9hjg-9r4m-mvj7
+          $python3 -m pip install --verbose \
+            --upgrade \
+            --prefix=/usr "--root=${{targets.contextdir}}" "requests>=2.32.4"
       - runs: |
           # clean out any bins other than semgrep and pysemgrep.
           d=$(mktemp -d)

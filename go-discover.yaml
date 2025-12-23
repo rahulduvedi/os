@@ -1,8 +1,8 @@
 #nolint:valid-pipeline-git-checkout-tag
 package:
   name: go-discover
-  version: "0_git20250514"
-  epoch: 0
+  version: "0_git20251222"
+  epoch: 0 # GHSA-4f99-4q7p-p3gh
   description: go-discover is a Go (golang) library and command line tool to discover ip addresses of nodes in cloud environments based on meta information like tags provided by the environment.
   copyright:
     - license: MPL-2.0
@@ -11,15 +11,8 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/hashicorp/go-discover
-      expected-commit: 0a93bdacfa3d28183b0a69584205eb5a562645b9
+      expected-commit: cbcd12d07640254d749de7852a4722ba3c17e655
       branch: master
-
-  - uses: go/bump
-    with:
-      deps: |-
-        golang.org/x/crypto@v0.35.0
-        golang.org/x/oauth2@v0.27.0
-        golang.org/x/net@v0.38.0
 
   - uses: go/build
     with:

@@ -1,6 +1,6 @@
 package:
   name: py3-sphinx
-  version: "8.2.3"
+  version: "9.0.4"
   epoch: 0
   description: Python Documentation Generator
   copyright:
@@ -31,7 +31,7 @@ pipeline:
     with:
       repository: https://github.com/sphinx-doc/sphinx
       tag: v${{package.version}}
-      expected-commit: 847ad0c991e21db9daa02fec09acbd456f353300
+      expected-commit: 8ddba7e4cb5fdc035b9b18b2a8594724a3a33b86
 
 subpackages:
   - range: py-versions
@@ -68,6 +68,7 @@ subpackages:
       - uses: strip
     test:
       pipeline:
+        - uses: test/tw/pip-check
         - uses: python/import
           with:
             python: python${{range.key}}
@@ -102,8 +103,8 @@ subpackages:
             sed 's,^,> ,' bins.list
 
             while read line; do
-              echo == /$line ==
-              /$line --help && echo exited 0 || echo "exited $?"
+              echo "== $line =="
+              /"$line" --help && echo exited 0 || echo "exited $?"
             done < bins.list
 
   - name: py3-supported-${{vars.pypi-package}}
@@ -114,6 +115,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:
@@ -124,6 +128,8 @@ test:
 
 update:
   enabled: true
+  ignore-regex-patterns:
+    - rc
   github:
     identifier: sphinx-doc/sphinx
     strip-prefix: v

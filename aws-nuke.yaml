@@ -1,7 +1,7 @@
 package:
   name: aws-nuke
-  version: "3.54.0"
-  epoch: 0
+  version: "3.62.2"
+  epoch: 0 # CVE-2025-47907
   description: Remove all the resources from an AWS account
   copyright:
     - license: MIT
@@ -11,7 +11,7 @@ pipeline:
     with:
       repository: https://github.com/ekristen/aws-nuke
       tag: v${{package.version}}
-      expected-commit: a5c57868a76d386ceeb8d8858fef8db85a945c50
+      expected-commit: 1b0ad9d4a3a1e93a5b3238b72e525c8e9dcb5790
 
   - uses: go/build
     with:

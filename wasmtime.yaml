@@ -1,7 +1,7 @@
 package:
   name: wasmtime
-  version: "32.0.0"
-  epoch: 1
+  version: "40.0.0"
+  epoch: 0 # GHSA-xwfj-jgwm-7wp5
   description: "A fast and secure runtime for WebAssembly"
   copyright:
     - license: Apache-2.0
@@ -22,9 +22,7 @@ pipeline:
     with:
       repository: https://github.com/bytecodealliance/wasmtime
       tag: v${{package.version}}
-      expected-commit: d3054950c67c340491f4f48021e58c11002e7513
-
-  - uses: rust/cargobump
+      expected-commit: 0807b003ef6250372b57cc083d2df28f8728abee
 
   - name: Configure and build
     runs: |
@@ -33,9 +31,6 @@ pipeline:
       # mitigate GHSA-2qv5-7mw5-j3cg
       cargo update spin --precise 0.9.8
 
-      # mitigate GHSA-h97m-ww89-6jmq
-      cargo update url --precise 2.5.4
-      cargo update idna --precise 1.0.3
 
       # Fix auditable builds: we're tripping over
       # https://github.com/rust-secure-code/cargo-auditable/issues/124 so need
@@ -45,6 +40,9 @@ pipeline:
       cargo auditable build --release -vv
       mkdir -p ${{targets.destdir}}/usr/bin/
       mv target/release/wasmtime ${{targets.destdir}}/usr/bin/
+
+      # Install dev headers
+      cmake -DWASMTIME_HEADER_DST=${{targets.destdir}}/usr/include -P ./crates/c-api/cmake/install-headers.cmake
 
   - uses: strip
 
@@ -59,6 +57,15 @@ subpackages:
       - uses: strip
     test:
       pipeline:
+        - uses: test/tw/ldd-check
+
+  - name: "${{package.name}}-dev"
+    description: "dev headers for wasmtime"
+    pipeline:
+      - uses: split/dev
+    test:
+      pipeline:
+        - uses: test/pkgconf
         - uses: test/tw/ldd-check
 
 update:

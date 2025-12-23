@@ -1,10 +1,16 @@
 package:
   name: flux-image-reflector-controller
-  version: "0.34.0"
-  epoch: 6
+  version: "1.0.4"
+  epoch: 3 # GHSA-j5w8-q4qc-rx2x
   description: GitOps Toolkit controller that scans container registries
   copyright:
     - license: Apache-2.0
+
+var-transforms:
+  - from: ${{package.version}}
+    match: ^(\d+).*
+    replace: $1
+    to: major-version
 
 environment:
   contents:
@@ -19,21 +25,47 @@ pipeline:
     with:
       repository: https://github.com/fluxcd/image-reflector-controller
       tag: v${{package.version}}
-      expected-commit: dfa82b6ebb01a19f73109bbb6c18e8c0f77036e0
+      expected-commit: 82454c4d88b1b933d5760593709c3cc64fb0e1fa
 
   - uses: go/bump
     with:
       deps: |-
-        golang.org/x/oauth2@v0.27.0
-        golang.org/x/crypto@v0.35.0
-        github.com/golang-jwt/jwt/v4@v4.5.2
-        github.com/golang-jwt/jwt/v5@v5.2.2
-        golang.org/x/net@v0.38.0
+        golang.org/x/crypto@v0.45.0
+      modroot: tests/integration
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
 
   - uses: go/build
     with:
       packages: .
       output: image-reflector-controller
+
+subpackages:
+  - name: ${{package.name}}-iamguarded-compat
+    description: "compat package for iamguarded"
+    pipeline:
+      - runs: |
+          mkdir -p /opt/iamguarded/fluxcd-image-reflector-controller/bin/
+          ln -sf /usr/bin/image-reflector-controller /opt/iamguarded/fluxcd-image-reflector-controller/bin/image-reflector-controller
+      - uses: iamguarded/build-compat
+        with:
+          package: flux-image-reflector-controller
+          version: ${{vars.major-version}}
+      - uses: iamguarded/finalize-compat
+        with:
+          package: flux-image-reflector-controller
+          version: ${{vars.major-version}}
+    test:
+      pipeline:
+        - runs: |
+            stat /opt/iamguarded/fluxcd-image-reflector-controller/bin/image-reflector-controller
+        - uses: iamguarded/test-compat
+          with:
+            package: flux-image-reflector-controller
+            version: ${{vars.major-version}}
 
 update:
   enabled: true
@@ -50,12 +82,22 @@ test:
     contents:
       packages:
         - ${{package.name}}
+        - curl
   pipeline:
-    # the image-reflector-controller when passing the -h flag exit with error code 2
     - runs: |
-        set +e
         image-reflector-controller -h
-        if [ $? -ne 2 ]; then
-          echo "expected 2, got $?"
-          exit 1
-        fi
+    - uses: test/kwok/cluster
+    - name: Launch controller with kwok cluster
+      uses: test/daemon-check-output
+      with:
+        setup: |
+          kubectl apply -f https://github.com/fluxcd/image-reflector-controller/releases/download/v${{package.version}}/image-reflector-controller.crds.yaml
+          kubectl wait --for=condition=Ready nodes --all
+        start: image-reflector-controller --health-addr :8081 --metrics-addr :8080
+        timeout: 30
+        expected_output: |
+          Starting Controller
+          Starting workers
+        post: |
+          curl --silent --fail localhost:8080/metrics
+          curl --silent --fail localhost:8081/healthz

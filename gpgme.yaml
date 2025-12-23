@@ -1,7 +1,7 @@
 package:
   name: gpgme
-  version: "1.24.2"
-  epoch: 2
+  version: "2.0.1"
+  epoch: 1
   description: GNU - GnuPG Made Easy
   copyright:
     - license: GPL-3.0-or-later
@@ -31,9 +31,6 @@ environment:
       - gpgsm
       - libassuan-dev
       - libgpg-error-dev
-      - py3-supported-build-base
-      - py3-supported-python-dev
-      - py3-supported-setuptools
       - swig
   environment:
     top_builddir: "/home/build/"
@@ -41,7 +38,7 @@ environment:
 pipeline:
   - uses: fetch
     with:
-      expected-sha256: e11b1a0e361777e9e55f48a03d89096e2abf08c63d84b7017cfe1dce06639581
+      expected-sha256: 821ab0695c842eab51752a81980c92b0410c7eadd04103f791d5d2a526784966
       uri: https://gnupg.org/ftp/gcrypt/gpgme/gpgme-${{package.version}}.tar.bz2
 
   - uses: autoconf/configure
@@ -53,7 +50,7 @@ pipeline:
   - uses: strip
 
 subpackages:
-  - name: gpgme-doc
+  - name: ${{package.name}}-doc
     pipeline:
       - uses: split/manpages
     description: gpgme manpages
@@ -61,12 +58,12 @@ subpackages:
       pipeline:
         - uses: test/docs
 
-  - name: gpgme-dev
+  - name: ${{package.name}}-dev
     pipeline:
       - uses: split/dev
     dependencies:
       runtime:
-        - gpgme
+        - ${{package.name}}
     description: gpgme dev
     test:
       pipeline:
@@ -74,37 +71,6 @@ subpackages:
         - uses: test/tw/ldd-check
           with:
             packages: ${{subpkg.name}}
-
-  - range: py-versions
-    name: py${{range.key}}-${{vars.pypi-package}}
-    description: python${{range.key}} version of ${{vars.pypi-package}}
-    pipeline:
-      - working-directory: lang/python
-        uses: py/pip-build-install
-        with:
-          python: python${{range.key}}
-      - uses: strip
-    test:
-      pipeline:
-        - uses: python/import
-          with:
-            python: python${{range.key}}
-            import: ${{vars.pypi-package}}
-
-  - name: py3-supported-${{vars.pypi-package}}
-    description: meta package providing ${{vars.pypi-package}} for supported python versions.
-    dependencies:
-      runtime:
-        - py3.10-${{vars.pypi-package}}
-        - py3.11-${{vars.pypi-package}}
-        - py3.12-${{vars.pypi-package}}
-        - py3.13-${{vars.pypi-package}}
-    test:
-      pipeline:
-        - uses: python/import
-          with:
-            python: python3.10
-            import: ${{vars.pypi-package}}
 
 update:
   enabled: true
@@ -114,8 +80,9 @@ update:
 test:
   pipeline:
     - uses: test/tw/ldd-check
-    - runs: |
-        gpgme-json --version
-        gpgme-tool --version
-        gpgme-json --help
-        gpgme-tool --help
+    - uses: test/tw/help-check
+      with:
+        bins: gpgme-json gpgme-tool
+    - uses: test/tw/ver-check
+      with:
+        bins: gpgme-json gpgme-tool

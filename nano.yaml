@@ -1,6 +1,6 @@
 package:
   name: nano
-  version: "8.4"
+  version: "8.7"
   epoch: 0
   description: "The Nano package contains a small, simple text editor which aims to replace Pico, the default editor in the Pine package."
   copyright:
@@ -17,7 +17,7 @@ pipeline:
   - uses: fetch
     with:
       uri: https://www.nano-editor.org/dist/v8/nano-${{package.version}}.tar.gz
-      expected-sha256: 35acc088bc190943382b4da2752563d28cf31351c1478419c4c82908fba94456
+      expected-sha256: 06f3237ded64dec61c8cbc531531d7a31784604e303beb3be46256bf1d212da2
 
   - uses: autoconf/configure
     with:
@@ -74,9 +74,10 @@ update:
 
 subpackages:
   - name: nano-doc
-    description: nano documentation
+    description: nano docs
     pipeline:
       - uses: split/manpages
+      - uses: split/infodir
     test:
       pipeline:
         - uses: test/docs

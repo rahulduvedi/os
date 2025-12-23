@@ -1,7 +1,7 @@
 # Generated from https://pypi.org/project/conda-build/
 package:
   name: conda-build
-  version: "25.4.2"
+  version: "25.11.1"
   epoch: 0
   description: tools for building conda packages
   copyright:
@@ -34,7 +34,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 423dc97382bcdbf3f87e361f99fe611fc92f5eb5
+      expected-commit: 68479a2d006a9647b96e76d1cf9b6303260124bc
       repository: https://github.com/conda/conda-build
       tag: ${{package.version}}
 
@@ -109,6 +109,9 @@ subpackages:
         - py3.10-${{vars.pypi-package}}
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

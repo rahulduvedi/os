@@ -1,7 +1,7 @@
 package:
   name: libfido2
   version: "1.16.0"
-  epoch: 0
+  epoch: 53
   description: library for FIDO 2.0 functionality
   copyright:
     - license: BSD-2-Clause
@@ -31,7 +31,7 @@ pipeline:
   - uses: cmake/install
 
   - runs: |
-      install -Dm644 -t ${{targets.contextdir}}/lib/udev/rules.d/ ./udev/70-u2f.rules
+      install -Dm644 -t ${{targets.contextdir}}/usr/lib/udev/rules.d/ ./udev/70-u2f.rules
 
   - uses: strip
 
@@ -47,14 +47,15 @@ subpackages:
       pipeline:
         - uses: test/pkgconf
         - uses: test/tw/ldd-check
+        - uses: test/tw/no-docs
 
   - name: libfido2-doc
     pipeline:
-      - uses: split/manpages
+      - uses: split/alldocs
     description: libfido2 manpages
     test:
       pipeline:
-        - uses: test/docs
+        - uses: test/tw/docs
 
   - name: fido2
     pipeline:
@@ -63,6 +64,7 @@ subpackages:
           mv ${{targets.destdir}}/usr/bin/* ${{targets.contextdir}}/usr/bin/
     test:
       pipeline:
+        - uses: test/tw/no-docs
         - runs: |
             command -v fido2-assert
             command -v fido2-cred
@@ -77,3 +79,4 @@ update:
 test:
   pipeline:
     - uses: test/tw/ldd-check
+    - uses: test/tw/no-docs

@@ -1,6 +1,6 @@
 package:
   name: py3-certifi
-  version: "2025.04.26"
+  version: "2025.11.12"
   epoch: 0
   description: Python3 package for providing Mozilla's CA Bundle
   copyright:
@@ -46,7 +46,7 @@ pipeline:
     with:
       repository: https://github.com/certifi/python-certifi.git
       tag: ${{package.version}}
-      expected-commit: 275c9eb55733a464589c15fb4566fddd4598e5b2
+      expected-commit: 37ea150bee10958559f804f128de2fdd48e1ed45
 
   - uses: patch
     with:
@@ -69,6 +69,9 @@ subpackages:
       - uses: strip
     test:
       pipeline:
+        - uses: test/tw/virtualpackage
+          with:
+            virtual-pkg-name: py3-${{vars.pypi-package}}
         - uses: python/import
           with:
             python: python${{range.key}}
@@ -82,6 +85,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/tw/metapackage
 
 update:
   enabled: true
@@ -89,3 +95,7 @@ update:
     identifier: certifi/python-certifi
     strip-prefix: v
     use-tag: true
+
+test:
+  pipeline:
+    - uses: test/tw/byproductpackage

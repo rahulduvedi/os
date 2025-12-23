@@ -2,7 +2,7 @@
 package:
   name: envoy-ratelimit
   # This project doesn't do releases and everything is commit based.
-  version: "0.0.0_git20250512"
+  version: "0.0.0_git20251216"
   epoch: 0
   description: Go/gRPC service designed to enable generic rate limit scenarios from different types of applications.
   copyright:
@@ -23,15 +23,10 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 3e085e5bbbf5e0e106b4aee8427a0b5def4ec706
+      expected-commit: 167d0f8eb07a98839283806b4291099bbcdee477
       repository: https://github.com/envoyproxy/ratelimit
       depth: -1
       branch: main
-
-  - uses: go/bump
-    with:
-      deps: |-
-        golang.org/x/net@v0.38.0
 
   - uses: go/build
     with:
@@ -42,7 +37,7 @@ test:
   environment:
     contents:
       packages:
-        - redis
+        - valkey
   pipeline:
     - runs: |
         mkdir -p /var/run/nutcracker
@@ -52,7 +47,7 @@ test:
         # Wait for redis service to start
         sleep 2
 
-        ratelimit -config_dir=configs &
+        ratelimit -config_dir=configs > /dev/null 2>&1 &
 
         # Wait for the ratelimit service to start
         sleep 2

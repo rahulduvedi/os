@@ -1,6 +1,6 @@
 package:
   name: py3-logbook
-  version: "1.8.1"
+  version: "1.9.2"
   epoch: 0
   description: A logging replacement for Python
   copyright:
@@ -26,13 +26,15 @@ environment:
       - cython
       - py3-supported-build-base-dev
       - py3-supported-cython
+      - py3-supported-setuptools-rust
+      - rust
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/getlogbook/logbook
       tag: ${{package.version}}
-      expected-commit: 9f83be63668f70c2e1943680a2e75411348e5d18
+      expected-commit: ab46a87502ed5bd5e83ee208aa6dabb05adece36
 
 subpackages:
   - range: py-versions
@@ -42,6 +44,8 @@ subpackages:
       provider-priority: ${{range.value}}
       provides:
         - py3-${{vars.pypi-package}}
+      runtime:
+        - py${{range.key}}-typing-extensions
     pipeline:
       - uses: py/pip-build-install
         with:
@@ -63,6 +67,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

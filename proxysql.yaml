@@ -1,6 +1,6 @@
 package:
   name: proxysql
-  version: "2.7.3"
+  version: "3.0.4"
   epoch: 0
   description: High-performance MySQL proxy with a GPL license
   copyright:
@@ -11,22 +11,27 @@ environment:
     packages:
       - autoconf
       - automake
+      - bison
       - build-base
       - busybox
       - bzip2
-      - cmake
+      - cmake-3
       - gawk
       - git
       - gnutls-dev
       - grep
       - icu
+      - icu-dev
       - jemalloc-dev
+      - libevent-dev
       - libgcrypt-dev
       - libtool
+      - m4
       - openssl
       - openssl-dev
       - patch
       - perl
+      - pkgconf-dev
       - posix-libc-utils
       - python3
       - util-linux-dev
@@ -37,7 +42,7 @@ pipeline:
     with:
       repository: https://github.com/sysown/proxysql
       tag: v${{package.version}}
-      expected-commit: 50b7f8535b95bf1213f34e9b0335e47dffdc2266
+      expected-commit: faa64a570d19fe35af43494db0babdee3e3cdc89
 
   - runs: make -j$(nproc) GIT_VERSION=${{package.version}}-r${{package.epoch}}
 

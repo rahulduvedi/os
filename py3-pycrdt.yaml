@@ -1,6 +1,6 @@
 package:
   name: py3-pycrdt
-  version: "0.12.17"
+  version: "0.12.44"
   epoch: 0
   description: CRDTs based on Yrs.
   annotations:
@@ -33,7 +33,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 08e69a8e315108210181090a44315b64459cf2a5
+      expected-commit: 58633de1873b21512eb97ffdc355a7e23ecda5c4
       repository: https://github.com/jupyter-server/pycrdt
       tag: ${{package.version}}
 
@@ -67,9 +67,17 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   enabled: true
   github:
     identifier: jupyter-server/pycrdt
     use-tag: true
+
+# Based on package contents inspection, it was found that this origin package is empty apart from its own SBOM and this test was added to confirm it is empty and will fail if the package is no longer empty (contains more than an SBOM)
+test:
+  pipeline:
+    - uses: test/emptypackage

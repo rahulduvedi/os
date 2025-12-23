@@ -1,6 +1,6 @@
 package:
   name: py3-fonttools
-  version: "4.58.0"
+  version: "4.61.1"
   epoch: 0
   description: Tools to manipulate font files
   copyright:
@@ -29,7 +29,7 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/fonttools/fonttools
-      expected-commit: ac4c5473c1495b129a87d6818b9cb0f1423d3489
+      expected-commit: 0a6517921cb779fef919a5e2cbc1a01e77375ced
       tag: ${{package.version}}
 
 subpackages:
@@ -85,6 +85,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

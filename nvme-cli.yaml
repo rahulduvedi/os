@@ -1,6 +1,6 @@
 package:
   name: nvme-cli
-  version: "2.13"
+  version: "2.16"
   epoch: 0
   description: NVM-Express user space tooling for Linux
   copyright:
@@ -21,7 +21,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: cc93333574d3f84f7be90756004a540a91671d76
+      expected-commit: faf7326a2997dea91687fd3daa17fc405910a4c1
       repository: https://github.com/linux-nvme/nvme-cli
       tag: v${{package.version}}
 

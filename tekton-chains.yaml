@@ -1,7 +1,7 @@
 package:
   name: tekton-chains
-  version: "0.25.0"
-  epoch: 0
+  version: "0.26.0"
+  epoch: 2 # CVE-2025-61729
   description: Supply Chain Security in Tekton Pipelines
   copyright:
     - license: Apache-2.0
@@ -13,9 +13,15 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 1682a367075dc6df62ae68b5cc9a81789e547767
+      expected-commit: 0c9284f740d672930274efbe75033df55dc78515
       repository: https://github.com/tektoncd/chains
       tag: v${{package.version}}
+
+  - uses: go/bump
+    with:
+      deps: |-
+        github.com/in-toto/go-witness@v0.9.1
+        golang.org/x/crypto@v0.45.0
 
   - uses: go/build
     with:

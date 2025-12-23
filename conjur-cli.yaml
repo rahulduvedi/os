@@ -1,0 +1,35 @@
+package:
+  name: conjur-cli
+  description: Conjur command line interface
+  version: "9.1.0"
+  epoch: 1 # CVE-2025-61725
+
+pipeline:
+  - uses: git-checkout
+    with:
+      expected-commit: e126f5882492dd5040bedf6ce0519d7d5842856f
+      repository: https://github.com/cyberark/conjur-cli-go
+      tag: v${{package.version}}
+
+  - uses: go/build
+    with:
+      packages: ./cmd/conjur
+      output: conjur
+      tidy: true
+      ldflags: |
+        -X "github.com/cyberark/conjur-cli-go/pkg/version.Tag=$(git rev-parse --short HEAD)"
+        -X "github.com/cyberark/conjur-cli-go/pkg/version.Version=${{package.version}}"
+
+update:
+  enabled: true
+  github:
+    identifier: cyberark/conjur-cli-go
+    strip-prefix: v
+    tag-filter: v
+    use-tag: true
+
+test:
+  pipeline:
+    - runs: |
+        conjur -v | grep ${{package.version}}
+        conjur -h

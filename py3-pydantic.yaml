@@ -1,8 +1,8 @@
 # Generated from https://pypi.org/project/pydantic/
 package:
   name: py3-pydantic
-  version: "2.11.4"
-  epoch: 0
+  version: "2.12.5"
+  epoch: 1
   description: Data validation using Python type hints
   copyright:
     - license: MIT
@@ -44,7 +44,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: d444cd1cf6c5af54b23a335aff2ea45eaac2c2f6
+      expected-commit: bd2d0dd0137dfa1a8fdff2529b9dfb1547980150
       repository: https://github.com/pydantic/pydantic
       tag: v${{package.version}}
 
@@ -55,7 +55,8 @@ subpackages:
     dependencies:
       runtime:
         - py${{range.key}}-annotated-types
-        - py${{range.key}}-pydantic-core~2.33.2
+        - py${{range.key}}-pydantic-core~2.41.5 # Sourced from https://github.com/pydantic/pydantic/blob/v${{package.version}}/pyproject.toml
+        - py${{range.key}}-pygments
         - py${{range.key}}-typing-extensions
         - py${{range.key}}-typing-inspection
       provides:
@@ -79,7 +80,7 @@ subpackages:
             import: ${{vars.pypi-package}}
         - uses: git-checkout
           with:
-            expected-commit: d444cd1cf6c5af54b23a335aff2ea45eaac2c2f6
+            expected-commit: bd2d0dd0137dfa1a8fdff2529b9dfb1547980150
             repository: https://github.com/pydantic/pydantic
             tag: v${{package.version}}
         - runs: |
@@ -90,6 +91,20 @@ subpackages:
             cd tests
             touch pytest.ini
             pytest test_version.py || (echo "Expected version is $(grep '__pydantic_core_version__ ==' ../pydantic/version.py | sed 's/.*== //')"; exit 1)
+        - runs: |
+            set -euo pipefail
+
+            # The git-checkout step creates /home/build/pydantic/ with source code.
+            # If we run tests from /home/build, Python imports ./pydantic/ (the source)
+            # Note, these tests are referenced from: '.py3-pydantic/'
+            cp test_*.py /tmp/
+            cd /tmp
+
+            # Run basic functionality tests
+            python${{range.key}} test_basic.py
+
+            # Run advanced feature tests
+            python${{range.key}} test_advanced.py
 
   - name: py3-supported-${{vars.pypi-package}}
     description: meta package providing ${{vars.pypi-package}} for supported python versions.
@@ -99,6 +114,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   enabled: true
@@ -108,3 +126,7 @@ update:
   github:
     identifier: pydantic/pydantic
     strip-prefix: v
+
+test:
+  pipeline:
+    - uses: test/tw/byproductpackage

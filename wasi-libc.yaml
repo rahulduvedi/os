@@ -1,6 +1,6 @@
 package:
   name: wasi-libc
-  version: 25
+  version: "28"
   epoch: 0
   description: "WASI libc implementation for WebAssembly"
   copyright:
@@ -13,9 +13,9 @@ environment:
       - busybox
       - ca-certificates-bundle
       - clang-17
-      - clang-17-dev
-      - llvm17
+      - llvm-17
       - make
+      - wasi-sdk-libclang-rt-builtins
       - wolfi-baselayout
 
 pipeline:
@@ -23,10 +23,12 @@ pipeline:
     with:
       repository: https://github.com/WebAssembly/wasi-libc
       tag: wasi-sdk-${{package.version}}
-      expected-commit: 574b88da481569b65a237cb80daf9a2d5aeaf82d
+      expected-commit: d181bdd429f0067c92d817909b01e4970ad7d70a
 
   - name: Build
     runs: |
+      export BUILTINS_LIB=/usr/lib/clang/lib/wasm32-unknown-wasi/libclang_rt.builtins.a
+      export CHECK_SYMBOLS=yes
       CC=clang  make
 
   - runs: make INSTALL_DIR="${{targets.destdir}}/usr/share/wasi-sysroot" install

@@ -8,7 +8,7 @@ package:
   # with the `version:` field.
   # 2. Created a new variable `mangled-package-version` to append `-ccs` to the
   # version.
-  version: "8.1.0.6"
+  version: "8.3.0.80"
   epoch: 0
   description: Community edition of Confluent Kafka.
   copyright:
@@ -19,7 +19,7 @@ package:
       - busybox
       - confluent-common-docker
       - confluent-common-docker-base
-      - confluent-common-docker-ub
+      - confluent-cp-docker-utils
       - confluent-docker-utils
       - confluent-kafka-images-kafka
       - openjdk-17-default-jvm
@@ -31,7 +31,7 @@ environment:
       - busybox
       - ca-certificates-bundle
       - curl
-      - gradle
+      - gradle-9
       - openjdk-17
       - sbt
   environment:
@@ -46,7 +46,7 @@ var-transforms:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: f087f97addd8e41fc50df2a6cce8dd57f4c9608c
+      expected-commit: 18d51c732276705fd2977bd216b8a5a8ad1a84a9
       repository: https://github.com/confluentinc/kafka
       tag: v${{vars.mangled-package-version}}
 
@@ -102,6 +102,9 @@ update:
     strip-suffix: -ccs
   ignore-regex-patterns:
     - -rc.*
+    - kafka-.*
+    - show
+    - fetch
   version-transform:
     - match: ^(\d+\.\d+\.\d+)\-(\d+)$
       replace: $1.$2

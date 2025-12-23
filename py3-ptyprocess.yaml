@@ -2,7 +2,7 @@
 package:
   name: py3-ptyprocess
   version: 0.7.0
-  epoch: 7
+  epoch: 9
   description: Run a subprocess in a pseudo terminal
   copyright:
     - license: ISC
@@ -64,9 +64,16 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   enabled: true
   github:
     identifier: pexpect/ptyprocess
     use-tag: true
+
+test:
+  pipeline:
+    - uses: test/tw/byproductpackage

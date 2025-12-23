@@ -1,6 +1,6 @@
 package:
   name: py3-ydiff
-  version: "1.4.2"
+  version: "1.5"
   epoch: 0
   description: "View colored, incremental diff in workspace or from stdin, side by side and auto paged"
   copyright:
@@ -27,7 +27,7 @@ pipeline:
     with:
       repository: https://github.com/ymattw/ydiff.git
       tag: ${{package.version}}
-      expected-commit: f703394be30f5f750cb9cc9f463c7ec6620ebc35
+      expected-commit: 58df197c054767d9c20625c8cb7cd7793b595da3
 
 subpackages:
   - range: py-versions
@@ -67,7 +67,7 @@ subpackages:
             - diffutils
       pipeline:
         - runs: |
-            ydiff -h | grep "Usage"
+            ydiff -h | grep -iq "Usage"
             ydiff --version | grep ${{package.version}}
         - runs: |
             diff -u testa.txt testb.txt | grep '^+  <include>com.google.guava:failureaccess</include>$'
@@ -80,6 +80,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   enabled: true
@@ -87,3 +90,10 @@ update:
   github:
     identifier: ymattw/ydiff
     use-tag: true
+  ignore-regex-patterns:
+    - ^_demo_diff$
+
+# Based on package contents inspection, it was found that this origin package is empty apart from its own SBOM and this test was added to confirm it is empty and will fail if the package is no longer empty (contains more than an SBOM)
+test:
+  pipeline:
+    - uses: test/emptypackage

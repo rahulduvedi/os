@@ -1,7 +1,7 @@
 package:
   name: stunnel
-  version: "5.74"
-  epoch: 1
+  version: "5.76"
+  epoch: 0
   description: SSL encryption wrapper between network client and server
   copyright:
     - license: GPL-2.0-or-later
@@ -32,7 +32,7 @@ pipeline:
   - uses: fetch
     with:
       uri: https://www.stunnel.org/archive/${{vars.mangled-package-version}}.x/stunnel-${{package.version}}.tar.gz
-      expected-sha512: b0581916c3979c8edb2dc31a3a5e9d26c565328a4314eecc4fcf3bc4eab12df019a6e3650304deec44ade630871ab5aad001839152b2e88cb226fa19744f8056
+      expected-sha512: 245f8888476de7d109c9a18ef08f87c4713e1082b6d17c296529ed55b6a5eddd7dd2e624402afed31512a83e65de2cca197704cda8c22cf96063e9283c074a96
 
   - uses: autoconf/configure
     with:
@@ -58,7 +58,7 @@ subpackages:
           packages:
             - stunnel
       pipeline:
-        - runs: test -f $(readlink -f /usr/bin/stunnel5)
+        - runs: test -f "$(readlink -f /usr/bin/stunnel5)"
 
   - name: ${{package.name}}-doc
     description: "${{package.name}} manpages"

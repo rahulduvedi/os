@@ -1,10 +1,15 @@
 package:
   name: podman
-  version: "5.5.0"
-  epoch: 0
+  version: "5.7.1"
+  epoch: 1 # GHSA-jv3w-x3r3-g6rm
   description: "A tool for managing OCI containers and pods"
   copyright:
     - license: Apache-2.0
+  dependencies:
+    runtime:
+      - conmon
+      - crun
+      - netavark
 
 environment:
   contents:
@@ -23,11 +28,10 @@ environment:
       - gpgme
       - gpgme-dev
       - grep
-      - iptables
       - iptables-dev
+      - iptables-wrappers
       - libassuan-dev
       - libgpg-error-dev
-      - libprotobuf
       - libseccomp-dev
       - libsystemd
       - man-db
@@ -44,7 +48,20 @@ pipeline:
     with:
       repository: https://github.com/containers/podman
       tag: v${{package.version}}
-      expected-commit: 0dbcb51477ee7ab8d3b47d30facf71fc38bb0c98
+      expected-commit: f845d14e941889ba4c071f35233d09b29d363c75
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+      modroot: test/tools
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+        github.com/sigstore/fulcio@v1.8.3
+        github.com/containernetworking/plugins@v1.9.0
 
   - runs: |
       make
@@ -52,6 +69,8 @@ pipeline:
       #make test
       make docs
       PREFIX=/usr DESTDIR="${{targets.destdir}}" make install
+      mkdir -p "${{targets.destdir}}"/etc/containers
+      cp ./pkg/machine/ocipull/policy.json "${{targets.destdir}}"/etc/containers
 
   - uses: strip
 

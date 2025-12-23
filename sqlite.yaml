@@ -1,6 +1,6 @@
 package:
   name: sqlite
-  version: "3.49.2"
+  version: "3.51.1"
   epoch: 0
   description: "C library which implements an SQL database engine"
   copyright:
@@ -13,6 +13,7 @@ environment:
       - busybox
       - ca-certificates-bundle
       - readline-dev
+      - tcl-dev
 
 # ref: https://www.sqlite.org/download.html
 # For version 3.X.Y the filename encoding is 3XX0Y00.
@@ -28,8 +29,14 @@ var-transforms:
 pipeline:
   - uses: fetch
     with:
-      uri: https://www.sqlite.org/2025/sqlite-autoconf-${{vars.sqlite-download-version}}.tar.gz
-      expected-sha256: 5c6d8697e8a32a1512a9be5ad2b2e7a891241c334f56f8b0fb4fc6051e1652e8
+      uri: https://www.sqlite.org/2025/sqlite-src-${{vars.sqlite-download-version}}.zip
+      expected-sha256: 0f8e765ac8ea7c36cf8ea9bffdd5c103564f4a8a635f215f9f783b338a13d971
+      extract: false
+
+  - name: Extract ZIP & move it to the normal place
+    runs: |
+      unzip sqlite-src-${{vars.sqlite-download-version}}.zip -d ../
+      mv ../sqlite-src-${{vars.sqlite-download-version}}/* .
 
   - name: Configure
     runs: |
@@ -57,7 +64,8 @@ pipeline:
          --enable-load-extension \
          --enable-fts3
 
-      make -j$(nproc) V=1
+      make "-j$(nproc)" V=1
+      make tclextension-install
 
   - uses: autoconf/make-install
 
@@ -100,6 +108,10 @@ update:
     identifier: 4877
 
 test:
+  environment:
+    contents:
+      packages:
+        - tcl
   pipeline:
     - name: "version check"
       runs: |
@@ -118,3 +130,22 @@ test:
         sqlite3 /tmp/test.db "SELECT * FROM test WHERE id > 50 LIMIT 5;"
         sqlite3 /tmp/test.db ".schema"
         sqlite3 /tmp/test.db "SELECT COUNT(*) FROM test;"
+    - name: "Jamon's Test"
+      runs: |
+        cat << EOF | tclsh
+        puts [info tclversion]
+        package require sqlite3
+
+        # Open sqlite.db file
+        sqlite3 db sqlite.db
+
+        # Create users table
+        db eval {CREATE TABLE IF NOT EXISTS users (firstname TEXT, lastname TEXT);}
+
+        # Show schema
+        puts "Database schema:"
+        puts [db eval {SELECT sql FROM sqlite_master WHERE type='table';}]
+
+        # Close database
+        db close
+        EOF

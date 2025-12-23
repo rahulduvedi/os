@@ -1,7 +1,7 @@
 package:
   name: ferretdb
-  version: "2.2.0"
-  epoch: 0
+  version: "2.7.0"
+  epoch: 2 # GHSA-j5w8-q4qc-rx2x
   description: "A truly Open Source MongoDB alternative"
   copyright:
     - license: Apache-2.0
@@ -12,14 +12,36 @@ environment:
       - build-base
       - busybox
       - ca-certificates-bundle
-      - go
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/FerretDB/FerretDB
       tag: v${{package.version}}
-      expected-commit: d2d96a7c5e19db2ccff63993ec568834b17fd6d9
+      expected-commit: 0d5eb3343a50b800634cc08ace608bb6f3a3f74b
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+      modroot: tools/mcphost
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+      modroot: tools
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+      modroot: integration
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
 
   - uses: go/build
     with:

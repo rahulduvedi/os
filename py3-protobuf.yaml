@@ -1,6 +1,6 @@
 package:
   name: py3-protobuf
-  version: "6.31.0"
+  version: "6.33.2"
   epoch: 0
   copyright:
     - license: BSD-3-Clause
@@ -29,7 +29,7 @@ pipeline:
   - uses: fetch
     with:
       uri: https://files.pythonhosted.org/packages/source/p/protobuf/protobuf-${{package.version}}.tar.gz
-      expected-sha256: 314fab1a6a316469dc2dd46f993cbbe95c861ea6807da910becfe7475bc26ffe
+      expected-sha256: 56dc370c91fbb8ac85bc13582c9e373569668a290aa2e66a590c2a0d35ddb9e4
 
 subpackages:
   - range: py-versions
@@ -40,6 +40,18 @@ subpackages:
       provides:
         - py3-${{vars.pypi-package}}
     pipeline:
+      # The upstream code enables aarch64-specific optimizations, which later will segfault in our tests
+      # because illegal CPU instructions are being used. I guess this is because different arm64 instructions extensions are
+      # embedded in the code compared to what most arm64 CPU could run.
+      # Disable the arm64-optimized ASM, and hope the non-optimized version can run just fine and not cause other problems.
+      # Before this change, functions call would be:
+      #   encode_varint() --> encode_longvarint_arm64()
+      # After this change, it would be:
+      #   encode_varint() --> encode_longvarint()
+      - if: ${{build.arch}} == "aarch64"
+        name: Disable aarch64 ASM optimizations
+        runs: |
+          find . -type f -name "*.c" -o -name "*.h" | xargs sed -i 's/#ifdef UPB_ARM64_ASM/#if 0/g'
       - uses: py/pip-build-install
         with:
           python: python${{range.key}}
@@ -59,6 +71,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

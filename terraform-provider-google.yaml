@@ -1,7 +1,7 @@
 package:
   name: terraform-provider-google
-  version: "6.35.0"
-  epoch: 0
+  version: "7.14.1"
+  epoch: 0 # GHSA-4f99-4q7p-p3gh
   description: Terraform GCP provider
   copyright:
     - license: MPL-2.0
@@ -14,7 +14,12 @@ pipeline:
     with:
       repository: https://github.com/hashicorp/terraform-provider-google
       tag: v${{package.version}}
-      expected-commit: 302fa27d8192f6b5bb2e581421c1d42bb538d579
+      expected-commit: 9c89f058a0ea4c5ffaba2817df461533a4446feb
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
 
   - uses: go/build
     with:

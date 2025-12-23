@@ -1,6 +1,6 @@
 package:
   name: py3-ipywidgets
-  version: "8.1.7"
+  version: "8.1.8"
   epoch: 0
   description: Jupyter interactive widgets
   copyright:
@@ -28,7 +28,7 @@ environment:
 pipeline:
   - uses: fetch
     with:
-      expected-sha256: 15f1ac050b9ccbefd45dccfbb2ef6bed0029d8278682d569d71b8dd96bee0376
+      expected-sha256: 61f969306b95f85fba6b6986b7fe45d73124d1d9e3023a8068710d47a22ea668
       uri: https://files.pythonhosted.org/packages/source/i/ipywidgets/ipywidgets-${{package.version}}.tar.gz
 
 subpackages:
@@ -66,6 +66,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

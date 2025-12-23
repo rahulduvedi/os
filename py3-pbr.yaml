@@ -1,7 +1,7 @@
 # Generated from https://pypi.org/project/pbr/
 package:
   name: py3-pbr
-  version: "6.1.1"
+  version: "7.0.3"
   epoch: 0
   description: Python Build Reasonableness
   copyright:
@@ -32,13 +32,13 @@ environment:
 pipeline:
   - uses: fetch
     with:
-      expected-sha256: 93ea72ce6989eb2eed99d0f75721474f69ad88128afdef5ac377eb797c4bf76b
+      expected-sha256: b46004ec30a5324672683ec848aed9e8fc500b0d261d40a3229c2d2bbfcedc29
       uri: https://files.pythonhosted.org/packages/source/p/pbr/pbr-${{package.version}}.tar.gz
 
 subpackages:
   - range: py-versions
     name: py${{range.key}}-${{vars.pypi-package}}
-    description: python${{range.key} version of ${{vars.pypi-package}}
+    description: python${{range.key}} version of ${{vars.pypi-package}}
     dependencies:
       provider-priority: ${{range.value}}
       runtime:
@@ -85,6 +85,17 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
+
+test:
+  pipeline:
+    - runs: |
+        pbr --help
+    - uses: python/import
+      with:
+        import: ${{vars.pypi-package}}
 
 update:
   enabled: true

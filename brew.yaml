@@ -1,6 +1,6 @@
 package:
   name: brew
-  version: "4.5.2"
+  version: "5.0.7"
   epoch: 0
   description: "The homebrew package manager"
   copyright:
@@ -17,7 +17,7 @@ package:
       - grep
       - posix-libc-utils
       - procps
-      - ruby-3.1
+      - ruby-3.4
   # Drop commands/depends/provides as the SCA doesn't work on brew since itself is a package manager
   options:
     no-commands: true
@@ -48,7 +48,7 @@ pipeline:
       repository: https://github.com/Homebrew/brew
       tag: ${{package.version}}
       destination: ./brew
-      expected-commit: 6f39076b3c2251994419215279d0525ef667fc31
+      expected-commit: b64029d4f999b8963d0dadb925d3b484207c1cee
 
   - runs: |
       set -x
@@ -83,3 +83,4 @@ test:
         . /etc/profile.d/brew.sh
         HOME=/root brew --version
     - uses: test/tw/ldd-check
+    - uses: test/no-docs

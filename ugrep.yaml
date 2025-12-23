@@ -1,8 +1,8 @@
 # Generated from https://git.alpinelinux.org/aports/plain/community/ugrep/APKBUILD
 package:
   name: ugrep
-  version: "7.4.2"
-  epoch: 0
+  version: "7.5.0"
+  epoch: 1
   description: Ultra fast grep with interactive query UI and fuzzy search
   copyright:
     - license: BSD-3-Clause
@@ -28,7 +28,7 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/Genivia/ugrep
-      expected-commit: c4c9fa0e0d035223369588d8db63a082a8d0f289
+      expected-commit: eada75555a2bc033559b182f334e0406bc54a641
       tag: v${{package.version}}
 
   - uses: autoconf/configure

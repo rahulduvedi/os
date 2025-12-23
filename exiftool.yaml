@@ -1,6 +1,6 @@
 package:
   name: exiftool
-  version: "13.29"
+  version: "13.44"
   epoch: 0
   description: ExifTool meta information reader/writer
   copyright:
@@ -24,7 +24,7 @@ pipeline:
     with:
       repository: https://github.com/exiftool/exiftool
       tag: ${{package.version}}
-      expected-commit: eeeb377653f5b178cc613b866b54257eaa613ea0
+      expected-commit: aa4baf5c71d92e5dc9a077ee24fcc4fd478936c1
 
   - runs: |
       PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor
@@ -44,8 +44,9 @@ update:
 test:
   pipeline:
     - runs: |
-        exiftool --version
-        exiftool --help
+        exiftool --version 2>&1 | cat
+        exiftool --help 2>&1 | cat
+    - uses: test/no-docs
 
 subpackages:
   - name: exiftool-doc

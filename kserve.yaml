@@ -1,29 +1,40 @@
 package:
   name: kserve
-  version: "0.15.0"
-  epoch: 4
+  version: "0.16.0"
+  epoch: 4 # GHSA-cfpf-hrx2-8rv6
   description: "Standardized Serverless ML Inference Platform on Kubernetes"
   copyright:
     - license: Apache-2.0
 
 vars:
-  py-version: 3.11 # Upstream https://github.com/kserve/kserve/blob/release-0.15/python/storage-initializer.Dockerfile uses python-3.11
+  python-version: 3.11 # Upstream https://github.com/kserve/kserve/blob/release-0.15/python/storage-initializer.Dockerfile uses python-3.11
 
 environment:
   contents:
     packages:
       - go
-      - py${{vars.py-version}}-pip
-      - py${{vars.py-version}}-poetry
-      - py${{vars.py-version}}-poetry-bin
-      - python-${{vars.py-version}}-dev
+      - py${{vars.python-version}}-pip
+      - python-${{vars.python-version}}-dev
+      - uv
 
 pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/kserve/kserve
       tag: v${{package.version}}
-      expected-commit: d20d4228a8b2956b800ad5a3e62c0578b5a5b97f
+      expected-commit: 5b033a4024429302440b72180472ae2d26b44086
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+        github.com/expr-lang/expr@v1.17.7
+
+  - uses: go/bump
+    with:
+      deps: |-
+        golang.org/x/crypto@v0.45.0
+      modroot: docs/samples/graph/bgtest/bgtest
 
   # kserve project puts this at the bottom of the go.mod so updating it with go/bump isn't possible
   - runs: |
@@ -32,13 +43,6 @@ pipeline:
   - uses: go/bump
     with:
       deps: |-
-        github.com/expr-lang/expr@v1.17.0
-        golang.org/x/net@v0.38.0
-
-  - uses: go/bump
-    with:
-      deps: |-
-        golang.org/x/oauth2@v0.27.0
         golang.org/x/net@v0.38.0
       modroot: qpext
 
@@ -88,30 +92,41 @@ subpackages:
     options:
       no-commands: true
     pipeline:
-      - name: poetry-build-storage-controller
-        working-directory: ./python/kserve
+      - name: uv-build-storage-library
+        working-directory: ./python/storage
         runs: |
-          # Due to bump-python-version.patch, we need to re-lock dependencies
-          poetry lock
+          # Install dependencies and build the package using uv
+          uv sync --locked
 
-          # Install dependencies and build the package using poetry
-          # NB: exclude 'ray' extras since that brings unwanted cuda/nv deps
-          poetry install --no-interaction --no-root --extras "storage"
-
-          # cryptography: CVE-2024-12797 GHSA-79v4-65xg-pq4g
-          poetry add \
-            "cryptography=^44.0.1"
-
-          # h11: CVE-2025-43859 GHSA-vqfr-h8mv-ghfj
-          poetry add \
-            "h11=^0.16.0"
-
-          poetry run pip freeze | grep -v kserve > requirements.txt
-          poetry build
+          uv pip freeze | grep -v kserve > requirements.txt
+          uv build
 
           # Install runtime deps and wheel with the root directory set to ${{targets.contextdir}}
           python3 -m pip install --root ${{targets.contextdir}} -I -r requirements.txt --no-compile
           python3 -m pip install --verbose --prefix=/usr --root=${{targets.contextdir}} dist/*.whl
+      - name: uv-build-storage-controller
+        working-directory: ./python/kserve
+        runs: |
+          # Due to bump-python-version.patch, we need to re-lock dependencies
+          uv lock
+
+          # urllib3: GHSA-gm62-xv2j-4w53 GHSA-2xpw-w6gg-jr37
+          uv add \
+            "urllib3>=2.6.0"
+
+          # Install dependencies and build the package using uv
+          # NB: exclude 'ray' extras since that brings unwanted cuda/nv deps
+          uv sync --extra storage
+
+          uv pip freeze | grep -v kserve > requirements.txt
+          uv build
+
+          # Install runtime deps and wheel with the root directory set to ${{targets.contextdir}}
+          python3 -m pip install --root ${{targets.contextdir}} -I -r requirements.txt --no-compile
+          python3 -m pip install --verbose --prefix=/usr --root=${{targets.contextdir}} dist/*.whl
+
+          # Upgrade requests to fix GHSA-9hjg-9r4m-mvj7
+          python3 -m pip install --upgrade "requests>=2.32.4" --prefix=/usr --root=${{targets.contextdir}}
       - name: install storage-initializer entrypoint
         working-directory: ./python/storage-initializer
         runs: |
@@ -122,7 +137,7 @@ subpackages:
 
           cd ${{targets.contextdir}}/storage-initializer/scripts/
           # update shbang to point to the python used rather than '/usr/bin/env python'
-          sed -i.dist "1s,#!/usr/bin/env python[^ ]*,#!$(which python${{vars.py-version}})," initializer-entrypoint
+          sed -i.dist "1s,#!/usr/bin/env python[^ ]*,#!$(which python${{vars.python-version}})," initializer-entrypoint
           # exit fail if it did not change anything
           diff -u initializer-entrypoint.dist initializer-entrypoint && exit 1
           rm initializer-entrypoint.dist

@@ -1,6 +1,6 @@
 package:
   name: varnish
-  version: "7.7.1"
+  version: "8.0.0"
   epoch: 0
   description: "Varnish Cache is a web application accelerator also known as a caching HTTP reverse proxy"
   copyright:
@@ -34,7 +34,8 @@ pipeline:
     with:
       repository: https://github.com/varnishcache/varnish-cache
       tag: varnish-${{package.version}}
-      expected-commit: 2e8180f788715e5bc44df08479d60c9435d79bdd
+      expected-commit: 71d4d75665f4d1949f7eeca28092a12df7037f3a
+      recurse-submodules: true
 
   - runs: autoreconf -vif
 
@@ -56,10 +57,19 @@ subpackages:
     test:
       pipeline:
         - uses: test/pkgconf
+        - uses: test/tw/ldd-check
     dependencies:
       runtime:
         - merged-usrsbin
         - wolfi-baselayout
+
+  - name: varnish-doc
+    description: varnish docs
+    pipeline:
+      - uses: split/manpages
+    test:
+      pipeline:
+        - uses: test/docs
 
 update:
   enabled: true

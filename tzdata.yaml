@@ -1,6 +1,6 @@
 package:
   name: tzdata
-  version: "2025b"
+  version: "2025c"
   epoch: 0
   description: "Timezone data provided by IANA"
   copyright:
@@ -18,7 +18,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 7e1145bfdb9630c127841dc8ce808a937a300938
+      expected-commit: b81d0be187f04ca856fc5a68a7ec2b8e460bafef
       repository: https://github.com/eggert/tz
       tag: ${{package.version}}
 

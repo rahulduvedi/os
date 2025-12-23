@@ -1,6 +1,6 @@
 package:
   name: R-sf
-  version: "1.0.20"
+  version: "1.0.23"
   epoch: 0
   description: Simple Features for R
   copyright:
@@ -48,7 +48,7 @@ pipeline:
     with:
       repository: https://github.com/cran/sf
       tag: ${{vars.mangled-package-version}}
-      expected-commit: 0d8b00433759a63348a27823d1b265e2642bb724
+      expected-commit: 0429ec778ee6f78ff5c7a677abe8f94c33639dd3
 
   - uses: R/build
     with:
@@ -61,6 +61,9 @@ test:
   pipeline:
     - runs: |
         Rscript -e 'library(sf)'
+    - uses: test/tw/ldd-check
+      with:
+        extra-library-paths: "/usr/lib/R/lib/"
 
 update:
   enabled: true

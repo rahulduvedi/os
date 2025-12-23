@@ -1,7 +1,7 @@
 package:
   name: envoy-gateway
-  version: "1.3.3"
-  epoch: 0
+  version: "1.6.1"
+  epoch: 0 # GHSA-j5w8-q4qc-rx2x
   description: Manages Envoy Proxy as a Standalone or Kubernetes-based Application Gateway
   copyright:
     - license: Apache-2.0
@@ -14,16 +14,15 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 34c134d24462ebcbcc4b235539683193fd3af94d
+      expected-commit: 19b3c67defb90ddf2ba9786fc13e43130816c6ea
       repository: https://github.com/envoyproxy/gateway
       tag: v${{package.version}}
 
   - uses: go/bump
     with:
       deps: |-
-        github.com/containerd/containerd@v1.7.27
-        helm.sh/helm/v3@v3.17.3
-        golang.org/x/net@v0.38.0
+        golang.org/x/crypto@v0.45.0
+      modroot: tools
 
   - uses: go/build
     with:
@@ -40,6 +39,11 @@ subpackages:
       - runs: |
           mkdir -p "${{targets.contextdir}}"/usr/local/bin
           ln -sf /usr/bin/envoy-gateway "${{targets.contextdir}}"/usr/local/bin/envoy-gateway
+    # test added by a robot (compat)
+    test:
+      pipeline:
+        - runs: |
+            readlink -v /usr/local/bin/envoy-gateway
 
   - name: ${{package.name}}-egctl
     pipeline:
@@ -61,14 +65,20 @@ test:
         - kubectl
         - git
         - curl
+        - mkcert
   pipeline:
     - uses: test/kwok/cluster
     - runs: |
         git clone --depth=1 -b v${{package.version}} https://github.com/envoyproxy/gateway
-        kubectl apply -f gateway/charts/gateway-helm/crds/gatewayapi-crds.yaml
+        kubectl apply --server-side -f gateway/charts/gateway-helm/crds/gatewayapi-crds.yaml
         kubectl apply --server-side=true -f gateway/charts/gateway-helm/crds/generated
     - runs: |
-        envoy-gateway serve &
+        mkdir -p /certs
+        mkcert -key-file /certs/tls.key -cert-file /certs/tls.crt localhost
+        # Copy the CA cert and key to /certs
+        cp $(mkcert -CAROOT)/rootCA.pem /certs/ca.crt
+        cp $(mkcert -CAROOT)/rootCA-key.pem /certs/ca.key
+        envoy-gateway serve > /dev/null 2>&1 &
         sleep 3
         curl -s localhost:8081/healthz | grep "ok"
         curl -s localhost:19001/metrics | grep certwatcher_read_certificate_total

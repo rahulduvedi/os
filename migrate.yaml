@@ -1,0 +1,47 @@
+package:
+  name: migrate
+  version: "4.19.1"
+  epoch: 1 # CVE-2025-61729
+  description: CLI and Golang library for database migrations.
+  copyright:
+    - license: Apache-2.0
+
+pipeline:
+  - uses: git-checkout
+    with:
+      expected-commit: 89e308c340a2c069c3260f268307d38a7db88227
+      repository: https://github.com/golang-migrate/migrate
+      tag: v${{package.version}}
+
+  - uses: go/build
+    with:
+      ldflags: |
+        -X main.Version=${{package.version}}
+      output: migrate
+      tags: postgres,mysql,redshift,cassandra,spanner,cockroachdb,yugabytedb,clickhouse,mongodb,sqlserver,firebird,neo4j,pgx,pgx5,rqlite,github
+      packages: ./cmd/migrate
+
+subpackages:
+  - name: "${{package.name}}-compat"
+    description: "Compatibility package to place binaries in the location expected by upstream helm charts"
+    pipeline:
+      - runs: |
+          mkdir -p "${{targets.subpkgdir}}"
+          ln -s /usr/local/bin/migrate ${{targets.subpkgdir}}/migrate
+    # test added by a robot (compat)
+    test:
+      pipeline:
+        - runs: |
+            readlink -v /migrate
+
+update:
+  enabled: true
+  github:
+    identifier: golang-migrate/migrate
+    strip-prefix: v
+
+test:
+  pipeline:
+    - name: "Verify Installation"
+      runs: |
+        migrate --help

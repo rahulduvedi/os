@@ -1,7 +1,7 @@
 package:
   name: flux-source-controller
-  version: "1.5.0"
-  epoch: 43
+  version: "1.7.4"
+  epoch: 3 # GHSA-j5w8-q4qc-rx2x
   description: The GitOps Toolkit source management component
   copyright:
     - license: Apache-2.0
@@ -9,6 +9,12 @@ package:
     runtime:
       - merged-usrsbin
       - wolfi-baselayout
+
+var-transforms:
+  - from: ${{package.version}}
+    match: ^(\d+).*
+    replace: $1
+    to: major-version
 
 environment:
   contents:
@@ -18,28 +24,19 @@ environment:
       - clang-16
       - gcc
       - go
-      - llvm-lld-16
+      - lld-16
 
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 301fc7271458e79a2331fc70c2ba5dc97c13d39c
+      expected-commit: 2eb5a81a22b414215f25d7981fd3ab7b078ad6ca
       repository: https://github.com/fluxcd/source-controller
       tag: v${{package.version}}
 
   - uses: go/bump
     with:
       deps: |-
-        oras.land/oras-go@v1.2.6
-        github.com/go-jose/go-jose/v4@v4.0.5
-        github.com/go-jose/go-jose/v3@v3.0.4
-        golang.org/x/oauth2@v0.27.0
-        golang.org/x/crypto@v0.35.0
-        github.com/containerd/containerd@v1.7.27
-        github.com/golang-jwt/jwt/v4@v4.5.2
-        github.com/golang-jwt/jwt/v5@v5.2.2
-        helm.sh/helm/v3@v3.17.3
-        golang.org/x/net@v0.38.0
+        golang.org/x/crypto@v0.45.0
 
   - runs: |
       mkdir -p "${{targets.destdir}}"/usr/bin
@@ -51,25 +48,28 @@ pipeline:
   - uses: strip
 
 subpackages:
-  - name: ${{package.name}}-bitnami-compat
-    description: "Compatibility package for usage with the Bitnami helm chart."
+  - name: ${{package.name}}-iamguarded-compat
+    description: "compat package for iamguarded"
     pipeline:
       - runs: |
-          mkdir -p ${{targets.contextdir}}/opt/bitnami/flux/bin/
-          ln -sf /usr/bin/source-controller ${{targets.contextdir}}/opt/bitnami/flux/bin/source-controller
+          mkdir -p /opt/iamguarded/flux/bin/
+          ln -sf /usr/bin/source-controller /opt/iamguarded/flux/bin/source-controller
+      - uses: iamguarded/build-compat
+        with:
+          package: flux-source-controller
+          version: ${{vars.major-version}}
+      - uses: iamguarded/finalize-compat
+        with:
+          package: flux-source-controller
+          version: ${{vars.major-version}}
     test:
-      environment:
-        contents:
-          packages:
-            - ${{package.name}}
       pipeline:
-        # the test is extensive in the main package and this is the same binary invoked via a symlink.
         - runs: |
-            /opt/bitnami/flux/bin/source-controller --help 2>&1 | grep -i "Usage of /opt/bitnami/flux/bin/source-controller"
-    dependencies:
-      runtime:
-        - merged-usrsbin
-        - wolfi-baselayout
+            stat /opt/iamguarded/flux/bin/source-controller
+        - uses: iamguarded/test-compat
+          with:
+            package: flux-source-controller
+            version: ${{vars.major-version}}
 
 update:
   enabled: true
@@ -82,40 +82,28 @@ update:
 
 test:
   environment:
-    environment:
-      KUBERNETES_SERVICE_HOST: "127.0.0.1"
-      KUBERNETES_SERVICE_PORT: 32764
     contents:
       packages:
         - ${{package.name}}
         - curl
   pipeline:
-    # the source-controller when passing the -h flag exit with error code 2
     - runs: |
-        set +e
-        source-controller -h
-        if [ $? -ne 2 ]; then
-          echo "expected 2, got $?"
-          exit 1
-        fi
-    # only passes with docker runner: `MELANGE_EXTRA_OPTS="--runner docker" make test/flux-notification-controller`
+        source-controller -h > output.txt 2>&1
+        cat output.txt | grep "Usage of source-controller"
     - uses: test/kwok/cluster
-    - name: "start ${{package.name}} and test"
+    - name: Launch controller with kwok cluster
       uses: test/daemon-check-output
       with:
         setup: |
-          kubectl apply -f https://github.com/fluxcd/flux2/releases/latest/download/install.yaml
+          kubectl apply -f https://github.com/fluxcd/source-controller/releases/download/v${{package.version}}/source-controller.crds.yaml
           kubectl wait --for=condition=Ready nodes --all
-        start: source-controller --storage-adv-addr=source-controller.default.svc.cluster.local --storage-path=/ --health-addr :9441 --metrics-addr :8081 > /dev/null 2>&1
+        start: source-controller --storage-path=/tmp --health-addr :9441 --metrics-addr :8081
         timeout: 30
         expected_output: |
-          starting file server
-          starting manager
-          source.toolkit.fluxcd.io
           Starting Controller
           Starting workers
         post: |
-          #!/bin/sh -e
           set -o pipefail
           curl -s localhost:8081/metrics  | grep rest_client_requests_total
           curl -v localhost:9441/healthz 2>&1 | grep -i "200 OK"
+          curl -s localhost:9090 | grep 'pre'

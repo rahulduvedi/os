@@ -1,6 +1,6 @@
 package:
   name: firefox
-  version: "138.0.3"
+  version: "146.0.1"
   epoch: 0
   description: Firefox web browser
   copyright:
@@ -13,9 +13,12 @@ package:
       - mesa
       - mesa-glx
       - pciutils-libs
+  resources:
+    cpu: 30
+    memory: 60Gi
 
 vars:
-  llvm-vers: 19
+  llvm-vers: 20
 
 environment:
   contents:
@@ -53,7 +56,7 @@ environment:
       - llvm-${{vars.llvm-vers}}
       - llvm-lld-${{vars.llvm-vers}}
       - m4
-      - nasm
+      - nasm<3
       - nodejs
       - pango-dev
       - pulseaudio-dev
@@ -68,15 +71,15 @@ pipeline:
   - uses: fetch
     with:
       uri: https://ftp.mozilla.org/pub/firefox/releases/${{package.version}}/source/firefox-${{package.version}}.source.tar.xz
-      expected-sha256: a27f3ab41d635b2a1d8418289d1dedcd6cb532148c7d63d3f8b97c66445513e4
+      expected-sha256: e9678a0e8473923953e1dc312c37919068623b6aa20adade16266049258191eb
 
   - runs: |
       # Craft the name of the final distfile.
       distfile="obj-${{cross.triplet.gnu.glibc}}/dist/firefox-${{package.version}}.en-US.linux-${{build.arch}}.tar.xz"
 
       # Copy the library into the directory for the clang we're using currently
-      mkdir -p /usr/lib/clang/${{vars.llvm-vers}}/lib/wasi/
-      cp /usr/lib/clang/lib/wasi/libclang_rt.builtins-wasm32.a /usr/lib/clang/${{vars.llvm-vers}}/lib/wasi/
+      mkdir -p /usr/lib/clang/${{vars.llvm-vers}}/lib/
+      cp -r /usr/lib/clang/lib/wasm* /usr/lib/clang/${{vars.llvm-vers}}/lib/
 
       # The instructions (and what we used before), used bootstrap script,
       # but the script does not work with wolfi, and does not really work

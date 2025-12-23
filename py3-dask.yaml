@@ -1,6 +1,6 @@
 package:
   name: py3-dask
-  version: "2025.5.0"
+  version: "2025.12.0"
   epoch: 0
   description: Dask is a flexible parallel computing library for analytics.
   annotations:
@@ -21,10 +21,12 @@ data:
       3.11: '311'
       3.12: '312'
       3.13: '313'
+
   - name: py-versions-latest
     items:
       3.12: '312'
       3.13: '313'
+
   - name: py-versions-importlib
     items:
       3.10: '310'
@@ -40,7 +42,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: abdb435dde0be15b262e9ad4657238c2bcb320c9
+      expected-commit: 2fd6715b7e129a27c3f303d7e8182b3814da23bc
       repository: https://github.com/dask/dask
       tag: ${{package.version}}
 
@@ -108,7 +110,7 @@ subpackages:
     dependencies:
       runtime:
         - py${{range.key}}-${{vars.pypi-package}}
-        - py${{range.key}}-numpy
+        - py${{range.key}}-numpy-2.2
     pipeline:
       - uses: py/pip-build-install
         with:
@@ -193,6 +195,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 update:
   enabled: true
@@ -201,3 +206,8 @@ update:
   github:
     identifier: dask/dask
     use-tag: true
+
+# Based on package contents inspection, it was found that this origin package is empty apart from its own SBOM and this test was added to confirm it is empty and will fail if the package is no longer empty (contains more than an SBOM)
+test:
+  pipeline:
+    - uses: test/emptypackage

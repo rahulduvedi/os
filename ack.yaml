@@ -1,7 +1,7 @@
 package:
   name: ack
-  version: "3.8.2"
-  epoch: 0
+  version: "3.9.0"
+  epoch: 4
   description: A Perl-powered replacement for grep
   copyright:
     - license: Artistic-2.0
@@ -19,10 +19,11 @@ environment:
       - perl-file-next
 
 pipeline:
-  - uses: fetch
+  - uses: git-checkout
     with:
-      expected-sha256: a5239f5a2c12e0c7b4e432ffd7e936feef945a9621a41591c77d3b0cf458560b
-      uri: https://cpan.metacpan.org/authors/id/P/PE/PETDANCE/ack-v${{package.version}}.tar.gz
+      repository: https://github.com/beyondgrep/ack3
+      tag: v${{package.version}}
+      expected-commit: 87e7ec655bc0929d0a507f202f5a86c3d74f2506
 
   - runs: PERL_MM_USE_DEFAULT=1 perl Makefile.PL INSTALLDIRS=vendor
 
@@ -45,15 +46,21 @@ subpackages:
 
 update:
   enabled: true
-  release-monitor:
-    identifier: 15
+  github:
+    identifier: beyondgrep/ack3
+    strip-prefix: v
+    use-tag: true
+    tag-filter-prefix: v
 
 test:
   pipeline:
-    - name: Verify ack installation
-      runs: |
-        ack --version || exit 1
-        ack --help
+    - uses: test/tw/help-check
+      with:
+        bins: ack
+    - uses: test/tw/ver-check
+      with:
+        bins: ack
     - name: Basic search test
       runs: |
         echo 'foo\nfoo bar\nbaz' | ack --noenv --nocolor bar - | grep -q 'foo bar' || exit 1
+    - uses: test/no-docs

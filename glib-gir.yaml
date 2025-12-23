@@ -2,7 +2,7 @@
 # glib-dev and gobject-introspection-dev
 package:
   name: glib-gir
-  version: "2.84.1"
+  version: "2.86.3"
   epoch: 0
   description: Common C routines used by Gtk+ and other libs
   copyright:
@@ -11,7 +11,7 @@ package:
 vars:
   # build uses rst2man from py3-docutils and also invokes 'python3'
   # installed /usr/bin/gtester-report gets correct shbang (/usr/bin/python3.XX)
-  py-version: 3.13
+  python-version: 3.13
 
 environment:
   contents:
@@ -33,8 +33,8 @@ environment:
       - libxslt-dev
       - meson
       - pcre2-dev
-      - py${{vars.py-version}}-docutils-bin
-      - python-${{vars.py-version}}
+      - py${{vars.python-version}}-docutils-bin
+      - python-${{vars.python-version}}
       - util-linux-dev
       - zlib-dev
 
@@ -49,7 +49,7 @@ var-transforms:
 pipeline:
   - uses: fetch
     with:
-      expected-sha256: 2b4bc2ec49611a5fc35f86aca855f2ed0196e69e53092bab6bb73396bf30789a
+      expected-sha256: b3211d8d34b9df5dca05787ef0ad5d7ca75dec998b970e1aab0001d229977c65
       uri: https://download.gnome.org/sources/glib/${{vars.mangled-package-version}}/glib-${{package.version}}.tar.xz
 
   - uses: meson/configure

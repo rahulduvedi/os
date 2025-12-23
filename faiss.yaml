@@ -1,6 +1,6 @@
 package:
   name: faiss
-  version: "1.11.0"
+  version: "1.13.2"
   epoch: 0
   description: A library for efficient similarity search and clustering of dense vectors.
   copyright:
@@ -19,7 +19,7 @@ pipeline:
   - uses: git-checkout
     with:
       destination: ${{package.name}}
-      expected-commit: ea1cdf0fb28f31ab36ea95d8d65abfcc184d1b8f
+      expected-commit: 070fbcdd93ee086ddacb1bbd0aa078e31864cdd9
       repository: https://github.com/facebookresearch/faiss
       tag: v${{package.version}}
 
@@ -51,3 +51,8 @@ update:
     identifier: facebookresearch/faiss
     strip-prefix: v
     tag-filter: v
+
+# Based on package size if was determined that this origin package is empty apart from its own SBOM and this test was added to confirm it is empty and will fail if the package is not longer empty (contains more than an SBOM)
+test:
+  pipeline:
+    - uses: test/emptypackage

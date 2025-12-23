@@ -1,6 +1,6 @@
 package:
   name: py3-sphinxcontrib-packages
-  version: 1.2.0
+  version: "1.2.1"
   epoch: 0
   description: This packages contains the Packages sphinx extension, which provides directives to display packages installed on the host machine
   copyright:
@@ -29,7 +29,7 @@ pipeline:
   - uses: git-checkout
     with:
       repository: https://github.com/sphinx-contrib/packages
-      expected-commit: 23defa4c1d6ebf5dd8cb4c5800e13224158e0a70
+      expected-commit: 46573e8ddb6a6a07ba35817a3a388d274a659caf
       tag: v${{package.version}}
 
 subpackages:
@@ -66,6 +66,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

@@ -1,6 +1,6 @@
 package:
   name: py3-flask-cors
-  version: "5.0.1"
+  version: "6.0.2"
   epoch: 0
   description: A Flask extension adding a decorator for CORS support
   copyright:
@@ -28,7 +28,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 5da9be479b4fb203816bca9eb0cfb7add5eeceb5
+      expected-commit: fa55dcbec68b3524a39e5057c35c29c221a27d64
       repository: https://github.com/corydolphin/flask-cors
       tag: ${{package.version}}
 
@@ -69,6 +69,9 @@ subpackages:
         - py3.11-${{vars.pypi-package}}
         - py3.12-${{vars.pypi-package}}
         - py3.13-${{vars.pypi-package}}
+    test:
+      pipeline:
+        - uses: test/metapackage
 
 test:
   pipeline:

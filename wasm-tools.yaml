@@ -1,6 +1,6 @@
 package:
   name: wasm-tools
-  version: "1.230.0"
+  version: "1.243.0"
   epoch: 0
   description: "Low level tooling for WebAssembly in Rust"
   copyright:
@@ -20,7 +20,7 @@ pipeline:
     with:
       repository: https://github.com/bytecodealliance/wasm-tools
       tag: v${{package.version}}
-      expected-commit: 2dbe8b9b88f646195bf9229aa7083cd5f2b62679
+      expected-commit: d05406062d031ae96146486f58a965d87eefea5e
 
   - name: Configure and build
     runs: |
@@ -39,6 +39,9 @@ update:
 
 test:
   pipeline:
+    - uses: test/tw/ver-check
+      with:
+        bins: wasm-tools
     - name: Validate a simple WebAssembly module
       runs: |
         # Create a simple WebAssembly module
@@ -46,5 +49,5 @@ test:
 
         # Validate the WebAssembly module
         wasm-tools validate sum.wasm
-        wasm-tools --version
-        wasm-tools --help
+    - name: Test help commands
+      runs: wasm-tools --help

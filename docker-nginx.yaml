@@ -1,6 +1,6 @@
 package:
   name: docker-nginx
-  version: "1.28.0"
+  version: "1.29.4"
   epoch: 0
   description: NGINX Dockerfiles
   copyright:
@@ -18,7 +18,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 7f1d49f6f222f7e588a9066fd53a0ce43c3466a5
+      expected-commit: afa829ae8cd9e25cf539cb03167dff1162f852cb
       repository: https://github.com/nginxinc/docker-nginx
       tag: ${{package.version}}
 

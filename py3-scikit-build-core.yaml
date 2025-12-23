@@ -1,7 +1,7 @@
 # Generated from https://pypi.org/project/scikit-build-core/
 package:
   name: py3-scikit-build-core
-  version: "0.11.2"
+  version: "0.11.6"
   epoch: 0
   description: Build backend for CMake based projects
   copyright:
@@ -23,7 +23,7 @@ environment:
 pipeline:
   - uses: git-checkout
     with:
-      expected-commit: 056ed3304eb473024e86a515913266c64aacc6f6
+      expected-commit: 24bd675a4a677e75324b61a358eee19c098f4c58
       repository: https://github.com/scikit-build/scikit-build-core
       tag: v${{package.version}}
 
@@ -49,6 +49,7 @@ subpackages:
       provider-priority: ${{range.value}}
     test:
       pipeline:
+        - uses: test/tw/pip-check
         - name: Import Test
           uses: python/import
           with:

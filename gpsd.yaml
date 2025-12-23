@@ -1,6 +1,6 @@
 package:
   name: gpsd
-  version: "3.26"
+  version: "3.27.1"
   epoch: 0
   description: GPS daemon
   copyright:
@@ -11,7 +11,7 @@ package:
       - wolfi-baselayout
 
 vars:
-  py-version: 3.13
+  python-version: 3.13
 
 environment:
   contents:
@@ -24,13 +24,13 @@ environment:
       - ca-certificates-bundle
       - libcap-dev
       - ncurses-dev
-      - py${{vars.py-version}}-build-base-dev
+      - py${{vars.python-version}}-build-base-dev
       - scons
 
 pipeline:
   - uses: fetch
     with:
-      expected-sha256: 291e57a6e227e223b46153170eac97a5f13dd00e214b7a38834083bf7eae1c30
+      expected-sha256: 3baa03b8fd922982950593665fa4d86fe9ecde8b3d2ed5c2d0320c7dcecc2937
       uri: https://download-mirror.savannah.gnu.org/releases/gpsd/gpsd-${{package.version}}.tar.gz
 
   - runs: |
@@ -41,8 +41,8 @@ pipeline:
       CPPFLAGS="$CPPFLAGS -I./pps-tools/ -DHAVE_SYS_TIMEPPS_H"
       scons -j${JOBS:-1} \
       	prefix=/usr \
-      	target_python=python${{vars.py-version}} \
-      	python_shebang=/usr/bin/python${{vars.py-version}} \
+      	target_python=python${{vars.python-version}} \
+      	python_shebang=/usr/bin/python${{vars.python-version}} \
       	dbus_export=no \
       	systemd=no
 
@@ -85,7 +85,7 @@ subpackages:
         - merged-usrsbin
         - wolfi-baselayout
 
-  - name: py${{vars.py-version}}-gpsd
+  - name: py${{vars.python-version}}-gpsd
     dependencies:
       provides:
         - py3-gpsd

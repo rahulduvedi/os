@@ -1,15 +1,13 @@
 package:
   name: icu
-  version: "75.1"
-  epoch: 40
+  version: "78.1"
+  epoch: 0
   description: "International Components for Unicode library"
   copyright:
     - license: MIT
   dependencies:
     runtime:
-      - icu-libs
-      - merged-usrsbin
-      - wolfi-baselayout
+      - libicu${{vars.major-version}}
 
 environment:
   contents:
@@ -17,6 +15,7 @@ environment:
       - build-base
       - busybox
       - ca-certificates-bundle
+      - python3
   environment:
     ICU_DATA_FILTER_FILE: "./data-filter-en.json"
 
@@ -37,8 +36,8 @@ var-transforms:
 pipeline:
   - uses: fetch
     with:
-      uri: https://github.com/unicode-org/icu/releases/download/release-${{vars.dash-package-version}}/icu4c-${{vars.underscore-package-version}}-src.tgz
-      expected-sha256: cb968df3e4d2e87e8b11c49a5d01c787bd13b9545280fc6642f826527618caef
+      uri: https://github.com/unicode-org/icu/releases/download/release-${{package.version}}/icu4c-${{package.version}}-sources.tgz
+      expected-sha512: c366398fdb50afc6355a8c45ed1d68a18eaa5f07a5d1c4555becbcfb9d4073e65ebe1e9caf24b93779b11b36cd813c98dd59e4b19f008851f25c7262811c112d
       strip-components: 0
 
   - runs: |
@@ -74,8 +73,6 @@ subpackages:
     dependencies:
       runtime:
         - icu
-        - merged-usrsbin
-        - wolfi-baselayout
     test:
       pipeline:
         - runs: |
@@ -84,7 +81,7 @@ subpackages:
         - uses: test/pkgconf
         - uses: test/tw/ldd-check
 
-  - name: icu-libs
+  - name: libicu${{vars.major-version}}
     description: International Components for Unicode library (libs)
     pipeline:
       - runs: |
@@ -94,23 +91,22 @@ subpackages:
           done
     dependencies:
       runtime:
-        - icu-data-full
-        - merged-usrsbin
-        - wolfi-baselayout
+        - icu${{vars.major-version}}-data-full
     test:
       pipeline:
         - uses: test/tw/ldd-check
 
-  - name: icu-data-full
+  - name: icu${{vars.major-version}}-data-full
     description: Full ICU data
     pipeline:
       - runs: |
           mkdir -p ${{targets.contextdir}}/usr/share/icu/${{package.version}}
           mv ${{targets.destdir}}/usr/share/icu/${{package.version}}/icudt${{vars.major-version}}l.dat ${{targets.contextdir}}/usr/share/icu/${{package.version}}/
-    dependencies:
-      runtime:
-        - merged-usrsbin
-        - wolfi-baselayout
+    test:
+      pipeline:
+        - name: "make sure some .dat files are present"
+          runs: |
+            find /usr/share -name *.dat | grep -q . || echo "FAIL: no .dat files found, unexpected"
 
   - name: icu-doc
     description: icu docs
@@ -119,10 +115,7 @@ subpackages:
     test:
       pipeline:
         - uses: test/docs
-    dependencies:
-      runtime:
-        - merged-usrsbin
-        - wolfi-baselayout
+        - uses: test/tw/docs
 
 # switch back to this once the GitHub release stops saying pre-release
 # github:
@@ -191,3 +184,4 @@ test:
       runs: |
         icuinfo | grep "locale.default"
         icuinfo | grep "converter.default" | grep "UTF-8"
+    - uses: test/tw/no-docs
